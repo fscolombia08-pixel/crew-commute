@@ -39,6 +39,19 @@
 
   L.name = function (iata) { return L.NAMES[iata] || iata || ''; };
 
+  /*
+   * Airline logo picture address from config.js (airlineLogos), or '' when logos are off.
+   * The pictures load from that logo service when someone looks at the page; none are stored in this site.
+   */
+  L.LOGO_W = 160;   /* asked at twice the shown size, so logos stay sharp on phone screens */
+  L.LOGO_H = 48;
+  L.logoUrl = function (iata) {
+    var tpl = String((root.CREW_CONFIG && root.CREW_CONFIG.airlineLogos) || '');
+    var code = String(iata || '').toUpperCase();
+    if (!/^https:\/\//i.test(tpl) || !/^[A-Z0-9]{2}$/.test(code)) return '';
+    return tpl.split('{code}').join(code).split('{w}').join(String(L.LOGO_W)).split('{h}').join(String(L.LOGO_H));
+  };
+
   /* Split "UA 1234" / "UA1234" / "SKW5432" into carrier + number. */
   L.splitNumber = function (s) {
     s = String(s || '').toUpperCase().replace(/\s+/g, ' ').trim();

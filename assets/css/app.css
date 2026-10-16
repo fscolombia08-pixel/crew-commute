@@ -310,7 +310,12 @@ body[data-mode="commute"] .find-only { display: none !important; }
 .tl-line i { width: 8px; height: 8px; border-radius: 50%; background: var(--surface); border: 2px solid var(--muted); }
 .tl-stops { font-size: .8rem; color: var(--ink-2); text-align: center; line-height: 1.2; max-width: 100%; word-wrap: break-word; }
 .itin-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 10px 0 4px; }
-.al { font-size: .78rem; font-weight: 750; padding: 2px 7px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); letter-spacing: .03em; }
+.al { display: inline-flex; align-items: center; font-size: .78rem; font-weight: 750; padding: 2px 7px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); letter-spacing: .03em; }
+/* airline logos: on a small white tile, so they show on light and dark backgrounds */
+.al-logo { flex: none; display: inline-block; vertical-align: middle; height: 16px; width: auto; max-width: 60px; object-fit: contain; background: #fff; border-radius: 4px; padding: 2px 4px; margin-right: 6px; box-shadow: 0 0 0 1px var(--line); }
+.al .al-logo { height: 14px; max-width: 52px; margin: 0 6px 0 -4px; padding: 1px 3px; box-shadow: none; }
+.al-logo-leg { height: 18px; max-width: 72px; margin-right: 0; }
+.al-chip .al-logo { height: 14px; max-width: 52px; margin: -2px 6px -2px -4px; }
 .al-mine { border-color: var(--accent); background: var(--mine-bg); }
 .backups { font-size: .82rem; color: var(--muted); margin-left: auto; }
 .day-badge { font-size: .75rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--brand-soft); color: var(--brand-ink); }

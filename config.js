@@ -8,6 +8,10 @@
  * quickTrips: one-tap searches shown to everyone at the top of the search box.
  *
  * hideAirlines: airlines never shown in results (Spirit, NK, stopped flying in May 2026).
+ *
+ * airlineLogos: where the airline logos come from ({code} = airline code, {w} and {h} = size).
+ *   It uses the free Aviasales airline-logo service. The logos belong to the airlines.
+ *   If a logo can't load, the site shows the airline code instead. Put "" to turn logos off.
  */
 window.CREW_CONFIG = {
   apiBase: "https://crew-commute-helper.fscolombia08.workers.dev",
@@ -17,5 +21,6 @@ window.CREW_CONFIG = {
     { from: "FLL", to: "DEN" },
     { from: "MIA", to: "DEN" }
   ],
-  hideAirlines: ["NK"]
+  hideAirlines: ["NK"],
+  airlineLogos: "https://img.wway.io/pics/root/{code}@png?exar=1&rs=fit:{w}:{h}"
 };

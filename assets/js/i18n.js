@@ -121,7 +121,8 @@
     st_GateClosed: 'Gate closed', st_CheckIn: 'Check-in open', st_Approaching: 'Landing soon',
     est: 'est. {t}',
     history: 'History',
-    footer_data: 'Flight data: AeroDataBox. History: U.S. DOT Bureau of Transportation Statistics. Weather: NOAA Aviation Weather Center. Delays: FAA NAS Status.',
+    footer_data: 'Flight data: AeroDataBox. History: U.S. DOT Bureau of Transportation Statistics. Weather: NOAA Aviation Weather Center. Delays: FAA NAS Status. Airline logos: Aviasales (logos belong to each airline).',
+    show_logos: 'Show airline logos',
     footer_disclaimer: 'Crew Commute is a free tool for airline employees and is not affiliated with any airline. It only finds flights: it does not show loads or open seats. Always check loads and listing in your airline\'s employee travel app.'
   };
 
@@ -243,7 +244,8 @@
     st_GateClosed: 'Puerta cerrada', st_CheckIn: 'Check-in abierto', st_Approaching: 'Por aterrizar',
     est: 'est. {t}',
     history: 'Historial',
-    footer_data: 'Datos de vuelos: AeroDataBox. Historial: Oficina de Estadísticas de Transporte (BTS) del DOT de EE. UU. Clima: NOAA Aviation Weather Center. Demoras: FAA NAS Status.',
+    footer_data: 'Datos de vuelos: AeroDataBox. Historial: Oficina de Estadísticas de Transporte (BTS) del DOT de EE. UU. Clima: NOAA Aviation Weather Center. Demoras: FAA NAS Status. Logos de aerolíneas: Aviasales (cada logo pertenece a su aerolínea).',
+    show_logos: 'Mostrar logos de aerolíneas',
     footer_disclaimer: 'Crew Commute es una herramienta gratuita para empleados de aerolíneas y no está afiliada a ninguna aerolínea. Solo encuentra vuelos: no muestra la ocupación ni los asientos libres. Revisa siempre la ocupación y tu listado en la app de viajes para empleados de tu aerolínea.'
   };
 

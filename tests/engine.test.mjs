@@ -162,6 +162,27 @@ test('hidden airlines are left out (by seller or operator), and Spirit is gone',
   }));
 });
 
+test('airline logo addresses come from config.js, only for real airline codes', async () => {
+  const vm = await import('node:vm');
+  const fs = await import('node:fs');
+  const box = { window: {} };
+  vm.runInNewContext(fs.readFileSync(new URL('../config.js', import.meta.url), 'utf8'), box);
+  const saved = globalThis.CREW_CONFIG;
+  globalThis.CREW_CONFIG = box.window.CREW_CONFIG;
+  try {
+    assert.equal(CC.airlines.logoUrl('ua'), 'https://img.wway.io/pics/root/UA@png?exar=1&rs=fit:160:48');
+    assert.equal(CC.airlines.logoUrl('9E'), 'https://img.wway.io/pics/root/9E@png?exar=1&rs=fit:160:48');
+    assert.equal(CC.airlines.logoUrl('"><x'), '');
+    assert.equal(CC.airlines.logoUrl(''), '');
+    globalThis.CREW_CONFIG = { airlineLogos: '' };
+    assert.equal(CC.airlines.logoUrl('UA'), '', 'empty turns logos off');
+    globalThis.CREW_CONFIG = { airlineLogos: 'http://insecure.example/{code}.png' };
+    assert.equal(CC.airlines.logoUrl('UA'), '', 'https only');
+  } finally {
+    globalThis.CREW_CONFIG = saved;
+  }
+});
+
 test('commute plan picks Plan A with a backup after it', () => {
   const its = [1, 2, 3, 4].map(h => ({ id: 'x' + h, depUtc: h * 3600000, arrUtc: h * 3600000 + 7200000, stops: 0, legs: [] }));
   const p = E.commutePlan(its, 1);

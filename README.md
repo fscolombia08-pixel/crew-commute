@@ -13,6 +13,7 @@ What it shows for each option:
 - **Inbound plane check:** is the aircraft for your flight late on its previous leg?
 - Weather (METAR/TAF) and FAA ground stops and delay programs at every airport on the trip
 - English and Spanish, light and dark theme, works on phones, tablets and computers, can be added to the home screen, saves your usual trips
+- **Airline logos** next to each airline code. They can be turned off in Settings.
 - **Easy start for friends:** when someone opens the site, a welcome pop-up asks for the **access code** (on the site, the group code is called the access code).
   - On their own phone they tick **Remember me on this device**.
   - On a shared or public computer they leave it unticked, and the code is forgotten when the browser tab is closed.
@@ -126,6 +127,7 @@ Open `config.js` on GitHub, click the pencil icon, and edit it. Then click **Com
 
 - `quickTrips`: the one-tap searches, for example `{ from: "DEN", to: "FLL" }`.
 - `hideAirlines`: airlines that never show up. It is set to `["NK"]` because Spirit stopped flying in May 2026.
+- `airlineLogos`: where the airline logos come from. They load from the free Aviasales airline-logo service when someone views the page. No logo files are stored in your site. If a logo can't load, the airline code is still shown. Put `""` to turn logos off for everyone.
 
 ## Light and dark theme
 
@@ -181,5 +183,6 @@ The route network (T-100) and on-time history come from free BTS downloads. To r
 - On-time history: BTS Marketing Carrier On-Time Performance (public domain)
 - Airports: [OurAirports](https://ourairports.com/data/) (public domain)
 - Weather: NOAA Aviation Weather Center. Delays: FAA NAS Status.
+- Airline logos: Aviasales (Travelpayouts) logo service. Each logo is a trademark of its airline.
 
 Crew Commute is a free tool for airline employees and is not affiliated with any airline. Follow your airline's pass-travel rules.

@@ -9,6 +9,7 @@
     lang: (typeof navigator !== 'undefined' && /^es/i.test(navigator.language || '')) ? 'es' : 'en',
     timeFmt: '24h',
     theme: 'auto',          /* auto (same as the device), light or dark */
+    showLogos: true,        /* airline logos next to the airline codes */
     rememberDevice: false,  /* last choice of "Remember me on this device" (the code itself is kept apart, below) */
     apiBase: '',
     forceDemo: false,

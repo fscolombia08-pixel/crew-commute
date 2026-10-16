@@ -73,6 +73,7 @@
     setupSettings();
     setupCodeDialog();
     setupResultsEvents();
+    setupLogos();
     applyLang();
     renderTrips();
     updateDemoBanner();
@@ -663,7 +664,7 @@
     E.prune(base, {}).forEach(it => it.carriers.forEach(cc => counts.set(cc, (counts.get(cc) || 0) + 1)));
     const mine = new Set(ST.get('myAirlines') || []);
     const chips = Array.from(counts.entries()).sort((x, y) => y[1] - x[1]).map(([code, n]) =>
-      `<button type="button" class="al-chip${st.include.indexOf(code) >= 0 ? ' on' : ''}${mine.has(code) ? ' mine' : ''}" data-act="al" data-al="${esc(code)}" title="${esc(AL.name(code))}">${esc(code)} <small>${n}</small></button>`).join('');
+      `<button type="button" class="al-chip${st.include.indexOf(code) >= 0 ? ' on' : ''}${mine.has(code) ? ' mine' : ''}" data-act="al" data-al="${esc(code)}" title="${esc(AL.name(code))}">${logo(code)}${esc(code)} <small>${n}</small></button>`).join('');
     const showTwo = !r.twoStopLoaded && r.q.maxStops < 2;
     el.innerHTML = `<div class="toolbar">
       <div class="counts"><b>${esc(v.length === 1 ? t('found_1') : t('found', { n: v.length }))}</b>
@@ -770,7 +771,7 @@
     const mine = (ST.get('myAirlines') || []).indexOf(leg.carrier) >= 0;
     return `<li class="leg">
       <div class="leg-top">
-        <span class="fl${mine ? ' fl-mine' : ''}">${esc(leg.flight)}</span>
+        ${logo(leg.carrier, 'al-logo-leg')}<span class="fl${mine ? ' fl-mine' : ''}">${esc(leg.flight)}</span>
         <span class="al-name">${esc(AL.name(leg.carrier))}</span>${op}${statusChip(leg)}
       </div>
       <div class="leg-times">
@@ -808,7 +809,7 @@
     const lvl = S.level(flags);
     const role = it.role ? `<span class="role role-${it.role}">${esc(t('role_' + it.role))}</span>` : '';
     const mine = new Set(ST.get('myAirlines') || []);
-    const carriers = it.carriers.map(c => `<span class="al${mine.has(c) ? ' al-mine' : ''}" title="${esc(AL.name(c))}">${esc(c)}</span>`).join('');
+    const carriers = it.carriers.map(c => `<span class="al${mine.has(c) ? ' al-mine' : ''}" title="${esc(AL.name(c))}">${logo(c)}${esc(c)}</span>`).join('');
     const backups = it.backups === 0 ? t('backups_0') : (it.backups === 1 ? t('backups_1') : t('backups_n', { n: it.backups > 20 ? '20+' : it.backups }));
     const dayBadge = st.run && it.depDate !== st.run.q.date ? `<span class="day-badge">${esc(T.fmtDate(it.depDate, lang()))}</span>` : '';
     const dots = it.conns.map(() => '<i></i>').join('');
@@ -983,6 +984,25 @@
       const tr = ST.trips()[+go.dataset.trip];
       if (tr) startTrip(tr);
     };
+  }
+
+  /* ================= airline logos ================= */
+  /* A logo is always shown next to the airline code, never instead of it, so a logo that can't load changes nothing. */
+  const badLogos = new Set();
+  function logo(code, cls) {
+    if (ST.get('showLogos') === false || badLogos.has(code)) return '';
+    const url = AL.logoUrl(code);
+    if (!url) return '';
+    return `<img class="al-logo${cls ? ' ' + cls : ''}" src="${esc(url)}" alt="" loading="lazy" decoding="async" referrerpolicy="no-referrer" data-code="${esc(code)}">`;
+  }
+  function setupLogos() {
+    const isLogo = (el) => el && el.classList && el.classList.contains('al-logo');
+    const drop = (img) => { badLogos.add(img.dataset.code); img.remove(); };
+    document.addEventListener('error', (e) => { if (isLogo(e.target)) drop(e.target); }, true);
+    /* an empty placeholder picture counts as missing */
+    document.addEventListener('load', (e) => {
+      if (isLogo(e.target) && (e.target.naturalWidth < 8 || e.target.naturalHeight < 8)) drop(e.target);
+    }, true);
   }
 
   /* ================= dialogs (with a fallback for older phones) ================= */
@@ -1173,13 +1193,15 @@
     $$('input[name=tfmt]').forEach(r => { r.checked = r.value === ST.get('timeFmt'); });
     $$('input[name=theme]').forEach(r => { r.checked = r.value === (ST.get('theme') || 'auto'); });
     $('#backupsWanted').value = String(ST.get('backupsWanted'));
+    $('#logosField').hidden = !AL.logoUrl('AA');
+    $('#logosToggle').checked = ST.get('showLogos') !== false;
     drawMyAirlines();
     openDialog(dlg);
   }
   function drawMyAirlines() {
     const mine = new Set(ST.get('myAirlines') || []);
     $('#myAirlines').innerHTML = MY_AIRLINE_CHOICES.filter(c => hiddenAirlines().indexOf(c) < 0).map(c =>
-      `<button type="button" class="al-chip${mine.has(c) ? ' on' : ''}" data-my="${esc(c)}" aria-pressed="${mine.has(c)}">${esc(c)} <small>${esc(AL.name(c))}</small></button>`).join('');
+      `<button type="button" class="al-chip${mine.has(c) ? ' on' : ''}" data-my="${esc(c)}" aria-pressed="${mine.has(c)}">${logo(c)}${esc(c)} <small>${esc(AL.name(c))}</small></button>`).join('');
   }
   function connKey() { return [ST.code(), ST.get('apiBase'), ST.get('forceDemo'), ST.exploring()].join('|'); }
   function saveSettingsInputs() {
@@ -1220,6 +1242,7 @@
     $$('input[name=lang]').forEach(r => r.addEventListener('change', () => { ST.set('lang', r.value); applyLang(); drawMyAirlines(); }));
     $$('input[name=tfmt]').forEach(r => r.addEventListener('change', () => { ST.set('timeFmt', r.value); render(); }));
     $('#backupsWanted').addEventListener('change', (e) => { ST.set('backupsWanted', +e.target.value); render(); });
+    $('#logosToggle').addEventListener('change', (e) => { ST.set('showLogos', e.target.checked); drawMyAirlines(); render(); });
     $('#resetBtn').addEventListener('click', () => {
       if (confirm(t('reset_confirm'))) { ST.reset(); location.hash = ''; location.reload(); }
     });
