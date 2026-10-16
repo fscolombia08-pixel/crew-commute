@@ -53,7 +53,7 @@
 
 /* ---------- base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-padding-top: calc(env(safe-area-inset-top) + 76px); }
 body {
   margin: 0; background: var(--bg); color: var(--ink);
   font: 16px/1.45 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -77,13 +77,20 @@ img, svg { max-width: 100%; }
 :focus-visible { outline: 3px solid var(--brand-line); outline-offset: 2px; }
 
 /* ---------- header ---------- */
+/*
+ * The top bar stays at the top with one solid color. iPhone web apps (iOS 26) paint the status bar
+ * with the color of a bar like this; without it they show a soft blur of the page there instead.
+ */
 .top {
-  background: var(--top); background: linear-gradient(160deg, var(--top), var(--top-2)); color: #fff;
-  padding: 14px 16px 64px;
-  padding-top: max(14px, env(safe-area-inset-top));
+  position: -webkit-sticky; position: sticky; top: 0; z-index: 30;
+  background: var(--top); color: #fff;
+  padding: 10px 16px;
+  padding-top: max(10px, env(safe-area-inset-top));
   padding-left: max(16px, env(safe-area-inset-left));
   padding-right: max(16px, env(safe-area-inset-right));
 }
+/* the blue band under the bar, which the search box overlaps */
+.top-band { height: 64px; background: linear-gradient(180deg, var(--top), var(--top-2)); }
 .top-inner { max-width: 980px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .brand { display: flex; align-items: center; gap: 10px; color: #fff; text-decoration: none; min-width: 0; }
 .logo { width: 36px; height: 36px; flex: none; color: #2a6ff0; }
@@ -172,8 +179,9 @@ body[data-mode="commute"] .find-only { display: none !important; }
 .ap-chip-city { font-size: .82rem; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; }
 .ap-chip-x { border: 0; background: transparent; color: inherit; width: 30px; height: 30px; border-radius: 6px; cursor: pointer; font-size: 1.15rem; line-height: 1; }
 .ap-chip-x:hover { background: rgba(127, 127, 127, .18); }
+.ap-anchor { position: relative; }
 .ap-list {
-  position: absolute; left: 0; right: 0; top: calc(100% - 22px); z-index: 20; margin: 0; padding: 6px; list-style: none;
+  position: absolute; left: 0; right: 0; top: calc(100% + 6px); z-index: 20; margin: 0; padding: 6px; list-style: none;
   background: var(--surface); border: 1px solid var(--line-2); border-radius: 12px; box-shadow: var(--pop-shadow);
   max-height: 340px; overflow: auto; -webkit-overflow-scrolling: touch;
 }
@@ -272,6 +280,18 @@ body[data-mode="commute"] .find-only { display: none !important; }
 .cat { font-size: .72rem; font-weight: 800; padding: 2px 7px; border-radius: 6px; color: var(--on-cat); letter-spacing: .04em; }
 .cat-VFR { background: var(--vfr); } .cat-MVFR { background: var(--mvfr); } .cat-IFR { background: var(--ifr); } .cat-LIFR { background: var(--lifr); }
 .cond-body { padding: 0 10px 10px; }
+.cond-empty { font-size: .86rem; color: var(--muted); }
+.cond-remove { margin-top: 8px; }
+.cond-add { margin-top: 14px; max-width: 520px; }
+.cond-add .ap-box { min-height: 48px; }
+.cond-legend { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+.cond-legend > summary { cursor: pointer; font-weight: 650; color: var(--brand); font-size: .92rem; padding: 4px 0; }
+.legend-head { margin: 12px 0 6px; font-weight: 650; font-size: .88rem; }
+.legend-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.legend-list li { display: grid; grid-template-columns: 74px 1fr; gap: 10px; align-items: start; font-size: .88rem; color: var(--ink-2); line-height: 1.4; }
+.legend-list .cat, .legend-list .cchip { justify-self: start; }
+.legend-term { font-size: .8rem; color: var(--ink); }
+.legend-note { margin: 8px 0 0; font-size: .8rem; color: var(--muted); }
 .raw { margin-top: 6px; }
 .raw code { display: block; white-space: pre-wrap; word-break: break-word; font: .82rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px; }
 
@@ -411,6 +431,8 @@ dialog:not([open]) { display: none; }
 .inline input { flex: 1; }
 .grid2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
 .chip-select { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters-actions { display: flex; justify-content: flex-start; }
+.clear-filters { white-space: nowrap; }
 
 /* welcome / access code pop-up */
 .code-dlg { width: 440px; }
@@ -455,7 +477,7 @@ dialog:not([open]) { display: none; }
 
 /* ---------- wider screens ---------- */
 @media (min-width: 720px) {
-  .top { padding-top: max(18px, env(safe-area-inset-top)); }
+  .top { padding-top: max(14px, env(safe-area-inset-top)); padding-bottom: 14px; }
   .row.when { grid-template-columns: repeat(auto-fill, minmax(200px, 280px)); }
   .od { grid-template-columns: 1fr 44px 1fr; align-items: start; }
   .swap-btn { position: static; transform: none; margin-top: 26px; }
@@ -471,6 +493,10 @@ dialog:not([open]) { display: none; }
 }
 @media (min-width: 980px) { .banner { margin-left: auto; margin-right: auto; } }
 
+/* phones: keep the top bar short (it stays on screen) */
+@media (max-width: 480px) {
+  .brand-tag { display: none; }
+}
 /* ---------- small phones ---------- */
 @media (max-width: 380px) {
   .card { padding: 13px; }
@@ -490,6 +516,6 @@ dialog:not([open]) { display: none; }
 
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 @media print {
-  .top, .search-card, .foot, .leg-actions, .itin-actions, #toolbar .tools, .al-chips, .two-stop { display: none !important; }
+  .top, .top-band, .search-card, .foot, .leg-actions, .itin-actions, #toolbar .tools, .al-chips, .two-stop, .cond-add, .cond-legend { display: none !important; }
   .itin { break-inside: avoid; box-shadow: none; }
 }

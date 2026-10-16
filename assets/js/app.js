@@ -74,6 +74,7 @@
     setupCodeDialog();
     setupResultsEvents();
     setupLogos();
+    setupConditions();
     applyLang();
     renderTrips();
     updateDemoBanner();
@@ -82,6 +83,8 @@
       $('#dateInput').value = T.deviceToday();
     }
     const shared = fromHash && st.from.length && st.to.length;
+    if (!shared && !needsCode() && condExtra().length) loadConditions();
+    else renderConditions();
     if (needsCode()) {
       if (shared) afterCode = () => search();
       openCodeDialog();
@@ -143,22 +146,22 @@
   }
 
   /* ================= airport pickers ================= */
-  function setupPicker(side) {
-    const field = $(`.ap-field[data-side="${side}"]`);
-    const input = $('.ap-input', field), list = $('.ap-list', field);
+  /* Airport suggestions under a text box (used by From, To and "Check any airport"). */
+  function attachSuggest(input, list, prefix, opts) {
     let items = [], active = -1;
-
     function close() { list.hidden = true; input.setAttribute('aria-expanded', 'false'); active = -1; }
     function show() {
-      items = AP.search(input.value, 8).filter(a => st[side].indexOf(a.iata) < 0);
+      const skip = opts.exclude ? opts.exclude() : [];
+      items = AP.search(input.value, 8).filter(a => skip.indexOf(a.iata) < 0);
       if (!items.length) { close(); return; }
       list.innerHTML = items.map((a, i) =>
-        `<li role="option" id="${side}-opt-${i}" class="ap-opt${i === active ? ' active' : ''}" data-code="${esc(a.iata)}">
+        `<li role="option" id="${prefix}-opt-${i}" class="ap-opt${i === active ? ' active' : ''}" data-code="${esc(a.iata)}">
            <span class="ap-code">${esc(a.iata)}</span><span class="ap-name">${esc(a.city)}<small>${esc(a.name)}${a.region ? ', ' + esc(a.region) : ''}</small></span></li>`).join('');
       list.hidden = false;
       input.setAttribute('aria-expanded', 'true');
-      input.setAttribute('aria-activedescendant', active >= 0 ? `${side}-opt-${active}` : '');
+      input.setAttribute('aria-activedescendant', active >= 0 ? `${prefix}-opt-${active}` : '');
     }
+    function pick(code) { opts.onPick(code); input.value = ''; close(); }
     input.addEventListener('input', () => { active = 0; show(); });
     input.addEventListener('focus', () => { if (input.value) show(); });
     input.addEventListener('blur', () => setTimeout(close, 150));
@@ -169,11 +172,20 @@
         if (!list.hidden && items[active]) { e.preventDefault(); pick(items[active].iata); }
         else if (input.value.trim().length === 3 && AP.get(input.value.trim())) { e.preventDefault(); pick(input.value.trim().toUpperCase()); }
       } else if (e.key === 'Escape') { close(); }
-      else if (e.key === 'Backspace' && !input.value && st[side].length) { removeCode(side, st[side][st[side].length - 1]); }
+      else if (e.key === 'Backspace' && !input.value && opts.onBackspaceEmpty) { opts.onBackspaceEmpty(); }
     });
     list.addEventListener('mousedown', (e) => {
       const li = e.target.closest('.ap-opt');
       if (li) { e.preventDefault(); pick(li.dataset.code); }
+    });
+  }
+  function setupPicker(side) {
+    const field = $(`.ap-field[data-side="${side}"]`);
+    const input = $('.ap-input', field), list = $('.ap-list', field);
+    attachSuggest(input, list, side, {
+      exclude: () => st[side],
+      onPick: (code) => addCode(side, code),
+      onBackspaceEmpty: () => { if (st[side].length) removeCode(side, st[side][st[side].length - 1]); }
     });
     field.addEventListener('click', (e) => {
       const rm = e.target.closest('[data-rm]');
@@ -182,11 +194,6 @@
       if (add) { addCode(side, add.dataset.add); return; }
       if (e.target.closest('.ap-box')) input.focus();
     });
-    function pick(code) {
-      addCode(side, code);
-      input.value = '';
-      close();
-    }
   }
   function addCode(side, code) {
     code = code.toUpperCase();
@@ -280,16 +287,45 @@
     $('#nightBefore').addEventListener('change', () => { remember(); if (st.run) search(); });
     ['#depAfter', '#depBefore'].forEach(s => $(s).addEventListener('change', () => { updateFilterCount(); if (st.run) search(); }));
     ['#arrAfter', '#arrBefore'].forEach(s => $(s).addEventListener('change', () => { updateFilterCount(); applyFilters(); }));
+    $('#resetFilters').addEventListener('click', resetFilters);
     updateFilterCount();
   }
 
-  function updateFilterCount() {
+  /* How many filters in the Filters box are not at their normal setting. */
+  function formFilterCount() {
+    const D = ST.defaults;
     let n = 0;
     ['#depAfter', '#depBefore', '#arrAfter', '#arrBefore'].forEach(s => { if ($(s).value) n++; });
     if ($('#noRedeye').checked) n++;
     if ($('#onlyMine').checked) n++;
-    if (String(($('input[name=stops]:checked') || {}).value) !== '1') n++;
+    if (String(($('input[name=stops]:checked') || {}).value) !== String(D.maxStops)) n++;
+    if (+$('#minSame').value !== D.minConnSame) n++;
+    if (+$('#minOther').value !== D.minConnOther) n++;
+    if (+$('#maxConn').value !== D.maxConn) n++;
+    return n;
+  }
+  /* ...plus the airline buttons above the results. */
+  function activeFilterCount() { return formFilterCount() + (st.include.length ? 1 : 0); }
+  function updateFilterCount() {
+    const n = formFilterCount();
     $('#filterCount').textContent = n ? ' · ' + n : '';
+    $('#resetFilters').disabled = !n && !st.include.length;
+  }
+  /* "Reset filters": everything in the Filters box back to normal, and all airlines shown again. */
+  function resetFilters() {
+    const D = ST.defaults;
+    ['#depAfter', '#depBefore', '#arrAfter', '#arrBefore'].forEach(s => { $(s).value = ''; });
+    $$('input[name=stops]').forEach(r => { r.checked = r.value === String(D.maxStops); });
+    $('#noRedeye').checked = false;
+    $('#onlyMine').checked = false;
+    $('#minSame').value = String(D.minConnSame);
+    $('#minOther').value = String(D.minConnOther);
+    $('#maxConn').value = String(D.maxConn);
+    ['minConnSame', 'minConnOther', 'maxConn', 'maxStops', 'noRedeye', 'onlyMine'].forEach(k => ST.set(k, D[k]));
+    st.include = [];
+    st.shown = 25;
+    updateFilterCount();
+    if (st.run) search();
   }
 
   function readForm() {
@@ -429,6 +465,7 @@
     st.run = { q, pool, itins, errors, plan, hubs, dates, arriveByUtc, reportUtc, twoStopLoaded, fatal, total: plan.length, demo: CC.api.isDemo() };
     st.shown = 25;
     st.include = [];
+    updateFilterCount();
     st.busy = false;
     $('#searchBtn').classList.remove('busy');
     $('#searchBtn').disabled = false;
@@ -453,15 +490,23 @@
     }
   }
 
+  /* Airports in "Airport conditions now": the trip's airports, then the ones people added. */
+  function condExtra() { return (ST.get('condExtra') || []).filter(c => AP.get(c)); }
   async function loadConditions() {
     const r = st.run;
-    if (!r) return;
-    const q = r.q;
-    const counts = new Map();
-    r.itins.slice(0, 80).forEach(it => it.conns.forEach(c => counts.set(c.at, (counts.get(c.at) || 0) + 1)));
-    const conn = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4).map(e => e[0]);
-    const airports = CC.uniq(q.from.concat(q.to, conn));
+    let trip = [];
+    if (r && !r.fatal) {
+      const q = r.q;
+      const counts = new Map();
+      r.itins.slice(0, 80).forEach(it => it.conns.forEach(c => counts.set(c.at, (counts.get(c.at) || 0) + 1)));
+      const conn = Array.from(counts.entries()).sort((a, b) => b[1] - a[1]).slice(0, 4).map(e => e[0]);
+      trip = CC.uniq(q.from.concat(q.to, conn));
+    }
+    st.tripCond = trip;
+    const airports = CC.uniq(trip.concat(condExtra()));
     st.condAirports = airports;
+    renderConditions();
+    if (!airports.length || needsCode()) return;      /* the helper needs a code (weather and FAA are free, but still go through it) */
     const jobs = [];
     if (Date.now() - st.faaAt > 5 * MIN) {
       jobs.push(CC.api.faa().then(x => { st.faa = CC.conditions.parseFaa(x); st.faaAt = Date.now(); }).catch(() => {}));
@@ -572,15 +617,15 @@
 
   function render() {
     const r = st.run;
-    if (!r) { $('#plan').innerHTML = ''; $('#conditions').innerHTML = ''; $('#toolbar').innerHTML = ''; $('#results').innerHTML = ''; return; }
-    const open = new Set($$('#results details[open], #conditions details[open]').map(d => d.dataset.key));
+    if (!r) { $('#plan').innerHTML = ''; $('#toolbar').innerHTML = ''; $('#results').innerHTML = ''; renderConditions(); return; }
+    const open = new Set($$('#results details[open]').map(d => d.dataset.key));
     st.view = computeView();
     ensureOntime(CC.uniq(st.view.slice(0, st.shown).flatMap(it => it.legs.map(l => l.from))));
     renderPlan();
     renderConditions();
     renderToolbar();
     renderResults();
-    $$('#results details[data-key], #conditions details[data-key]').forEach(d => { if (open.has(d.dataset.key)) d.open = true; });
+    $$('#results details[data-key]').forEach(d => { if (open.has(d.dataset.key)) d.open = true; });
   }
 
   function renderPlan() {
@@ -625,30 +670,55 @@
   }
 
   function renderConditions() {
-    const r = st.run, el = $('#conditions');
-    if (!st.condAirports.length || r.fatal) { el.innerHTML = ''; return; }
+    const card = $('#condCard');
+    const list = $('#condList');
+    const open = new Set($$('details[open]', list).map(d => d.dataset.key));
+    const extra = condExtra();
     let worst = 0;
-    const chips = st.condAirports.map(code => {
+    $('#condChips').innerHTML = st.condAirports.length ? st.condAirports.map(code => {
       const w = st.wx[AP.icao(code)];
       const lvl = CC.conditions.faaLevel(st.faa[code] || []);
       worst = Math.max(worst, lvl, w && (w.cat === 'IFR' || w.cat === 'LIFR') ? 1 : 0);
       return `<span class="cchip faa-${lvl}"><b>${esc(code)}</b>${w && w.cat ? `<span class="cat cat-${esc(w.cat)}">${esc(w.cat)}</span>` : ''}${lvl ? '<span class="cflag">!</span>' : ''}</span>`;
-    }).join('');
-    const items = st.condAirports.map(code => {
+    }).join('') : `<span class="cond-empty">${esc(t('cond_empty'))}</span>`;
+    list.innerHTML = st.condAirports.map(code => {
       const w = st.wx[AP.icao(code)];
       const faa = st.faa[code] || [];
       const lvl = CC.conditions.faaLevel(faa);
       const cat = w && w.cat ? w.cat : '';
-      const faaLine = faa.length ? faa.map(faaText).join(' / ') : t('no_delays');
+      const loaded = !!st.wxAt[AP.icao(code)];
+      const faaLine = faa.length ? faa.map(faaText).join(' / ') : (st.faaAt ? t('no_delays') : '');
+      const a = AP.get(code);
+      const mine = extra.indexOf(code) >= 0;
       return `<details class="cond-item faa-${lvl}" data-key="cond:${esc(code)}">
-        <summary><b>${esc(code)}</b>${cat ? `<span class="cat cat-${esc(cat)}">${esc(cat)}</span>` : ''}<span class="cond-faa">${esc(faaLine)}</span></summary>
-        <div class="cond-body">${w && w.raw ? `<div class="raw"><span class="lbl">${t('metar')}</span><code>${esc(w.raw)}</code></div>` : `<p class="muted small">${esc(t('wx_none'))}</p>`}
-        ${w && w.taf ? `<div class="raw"><span class="lbl">${t('taf')}</span><code>${esc(w.taf)}</code></div>` : ''}</div>
+        <summary><b>${esc(code)}</b>${cat ? `<span class="cat cat-${esc(cat)}">${esc(cat)}</span>` : ''}<span class="cond-faa">${esc(faaLine || (a ? a.city : ''))}</span></summary>
+        <div class="cond-body">${w && w.raw ? `<div class="raw"><span class="lbl">${t('metar')}</span><code>${esc(w.raw)}</code></div>` : `<p class="muted small">${esc(loaded ? t('wx_none') : t('loading'))}</p>`}
+        ${w && w.taf ? `<div class="raw"><span class="lbl">${t('taf')}</span><code>${esc(w.taf)}</code></div>` : ''}
+        ${mine ? `<button type="button" class="link-btn cond-remove" data-cond-rm="${esc(code)}">${esc(t('cond_remove'))}</button>` : ''}</div>
       </details>`;
     }).join('');
-    el.innerHTML = `<details class="card cond-card${worst ? ' cond-alert' : ''}" data-key="cond-all">
-      <summary><span class="cond-title">${esc(t('conditions'))}</span><span class="cchips">${chips}</span></summary>
-      <div class="cond-list">${items}</div></details>`;
+    $$('details[data-key]', list).forEach(d => { if (open.has(d.dataset.key)) d.open = true; });
+    card.classList.toggle('cond-alert', worst > 0);
+  }
+  /* "Check any airport": added airports are remembered on this device (up to 6). */
+  function setupConditions() {
+    attachSuggest($('#condInput'), $('#condSugg'), 'cond', {
+      exclude: () => st.condAirports,
+      onPick: (code) => {
+        ST.set('condExtra', [code].concat(condExtra().filter(c => c !== code)).slice(0, 6));
+        if (needsCode()) { afterCode = () => loadConditions(); openCodeDialog(); }
+        loadConditions().then(() => {
+          const item = $(`#condList details[data-key="cond:${code}"]`);
+          if (item) item.open = true;
+        });
+      }
+    });
+    $('#condList').addEventListener('click', (e) => {
+      const rm = e.target.closest('[data-cond-rm]');
+      if (!rm) return;
+      ST.set('condExtra', condExtra().filter(c => c !== rm.dataset.condRm));
+      loadConditions();
+    });
   }
 
   function renderToolbar() {
@@ -666,6 +736,7 @@
     const chips = Array.from(counts.entries()).sort((x, y) => y[1] - x[1]).map(([code, n]) =>
       `<button type="button" class="al-chip${st.include.indexOf(code) >= 0 ? ' on' : ''}${mine.has(code) ? ' mine' : ''}" data-act="al" data-al="${esc(code)}" title="${esc(AL.name(code))}">${logo(code)}${esc(code)} <small>${n}</small></button>`).join('');
     const showTwo = !r.twoStopLoaded && r.q.maxStops < 2;
+    const nFilters = activeFilterCount();
     el.innerHTML = `<div class="toolbar">
       <div class="counts"><b>${esc(v.length === 1 ? t('found_1') : t('found', { n: v.length }))}</b>
         <span class="muted">${esc(t('found_breakdown', { a, b, c }))}</span></div>
@@ -675,6 +746,7 @@
           <select id="sortSel">${sorts.map(s => option(s, t('sort_' + s), s === sortKey)).join('')}</select></label>
         <button type="button" class="ghost sm" data-act="save-trip">☆ ${esc(t('save_trip'))}</button>
         <button type="button" class="ghost sm" data-act="share-search">${esc(t('share'))}</button>
+        ${nFilters ? `<button type="button" class="ghost sm clear-filters" data-act="clear-filters">✕ ${esc(t('clear_filters'))} (${nFilters})</button>` : ''}
       </div>
       ${chips ? `<div class="al-chips"><span class="muted small">${esc(t('airlines'))}:</span>
         <button type="button" class="al-chip${st.include.length ? '' : ' on'}" data-act="al" data-al="">${esc(t('all_airlines'))}</button>${chips}</div>` : ''}
@@ -692,7 +764,9 @@
     if (r.fatal) { el.innerHTML = ''; return; }
     const v = st.view;
     if (!v.length) {
-      el.innerHTML = `<div class="card empty"><p><b>${esc(t('no_results'))}</b></p><p class="muted">${esc(t('no_results_tips'))}</p></div>`;
+      const nFilters = activeFilterCount();
+      el.innerHTML = `<div class="card empty"><p><b>${esc(t('no_results'))}</b></p><p class="muted">${esc(t('no_results_tips'))}</p>
+        ${nFilters ? `<p class="muted">${esc(t('filters_on', { n: nFilters }))}</p><button type="button" class="ghost sm clear-filters" data-act="clear-filters">✕ ${esc(t('clear_filters'))}</button>` : ''}</div>`;
       return;
     }
     const sortKey = currentSort();
@@ -919,9 +993,11 @@
         else if (st.include.indexOf(code) >= 0) st.include = st.include.filter(c => c !== code);
         else st.include = st.include.concat(code);
         st.shown = 25;
+        updateFilterCount();
         render();
         return;
       }
+      if (act === 'clear-filters') { resetFilters(); return; }
       if (act === 'two-stop') {
         search(false, { twoStop: true });
         return;

@@ -19,6 +19,7 @@
   </script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Crew Commute">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
@@ -53,6 +54,7 @@
       </div>
     </div>
   </header>
+  <div class="top-band" aria-hidden="true"></div>
 
   <div id="demoBanner" class="banner" hidden>
     <span data-i18n="demo_banner"></span>
@@ -82,12 +84,14 @@
         <div class="od">
           <div class="ap-field" data-side="from">
             <label class="lbl" for="fromInput" data-i18n="from">From</label>
+            <div class="ap-anchor">
             <div class="ap-box">
               <div class="ap-chips"></div>
               <input id="fromInput" class="ap-input" type="text" inputmode="search" spellcheck="false"
                      role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="fromList" data-i18n-ph="airport_ph">
             </div>
             <ul id="fromList" class="ap-list" role="listbox" hidden></ul>
+            </div>
             <div class="ap-nearby"></div>
           </div>
 
@@ -97,12 +101,14 @@
 
           <div class="ap-field" data-side="to">
             <label class="lbl" for="toInput" id="toLabel" data-i18n="to">To</label>
+            <div class="ap-anchor">
             <div class="ap-box">
               <div class="ap-chips"></div>
               <input id="toInput" class="ap-input" type="text" inputmode="search" spellcheck="false"
                      role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="toList" data-i18n-ph="airport_ph">
             </div>
             <ul id="toList" class="ap-list" role="listbox" hidden></ul>
+            </div>
             <div class="ap-nearby"></div>
           </div>
         </div>
@@ -166,6 +172,9 @@
               <label class="check"><input type="checkbox" id="noRedeye"> <span data-i18n="hide_redeyes">Hide red-eyes</span></label>
               <label class="check"><input type="checkbox" id="onlyMine"> <span data-i18n="only_mine">Only my airlines</span></label>
             </div>
+            <div class="field span2 filters-actions">
+              <button type="button" class="ghost sm" id="resetFilters" data-i18n="reset_filters">Reset filters</button>
+            </div>
           </div>
         </details>
 
@@ -178,7 +187,47 @@
 
     <section id="status" class="status" aria-live="polite"></section>
     <section id="plan"></section>
-    <section id="conditions"></section>
+    <section id="conditions">
+      <details class="card cond-card" id="condCard">
+        <summary><span class="cond-title" data-i18n="conditions">Airport conditions now</span><span class="cchips" id="condChips"></span></summary>
+        <div class="cond-list" id="condList"></div>
+        <div class="cond-add">
+          <label class="lbl" for="condInput" data-i18n="cond_check">Check any airport</label>
+          <div class="ap-anchor">
+            <div class="ap-box">
+              <input id="condInput" class="ap-input" type="text" inputmode="search" spellcheck="false" autocomplete="off"
+                     role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="condSugg" data-i18n-ph="airport_ph">
+            </div>
+            <ul id="condSugg" class="ap-list" role="listbox" hidden></ul>
+          </div>
+        </div>
+        <details class="cond-legend">
+          <summary data-i18n="legend_title">What do these mean?</summary>
+          <p class="legend-head" data-i18n="legend_wx">Weather at the airport (from the latest report):</p>
+          <ul class="legend-list">
+            <li><span class="cat cat-VFR">VFR</span><span data-i18n="legend_vfr">Good weather: clouds above 3,000 ft and visibility over 5 miles.</span></li>
+            <li><span class="cat cat-MVFR">MVFR</span><span data-i18n="legend_mvfr">Fair: clouds 1,000–3,000 ft or visibility 3–5 miles. Small delays are possible.</span></li>
+            <li><span class="cat cat-IFR">IFR</span><span data-i18n="legend_ifr">Poor: clouds 500–900 ft or visibility 1–3 miles. The airport handles fewer flights, so delays are more likely.</span></li>
+            <li><span class="cat cat-LIFR">LIFR</span><span data-i18n="legend_lifr">Very poor: clouds below 500 ft or visibility under 1 mile. Expect delays; some flights may divert or cancel.</span></li>
+          </ul>
+          <p class="legend-note" data-i18n="legend_ceiling">"Clouds" means the ceiling: the lowest cloud layer that covers most of the sky.</p>
+          <p class="legend-head" data-i18n="legend_faa">FAA delays right now:</p>
+          <ul class="legend-list">
+            <li><span class="cchip faa-2"><b>ABC</b><span class="cflag">!</span></span><span data-i18n="legend_flag">The FAA reports delays or a closure at this airport.</span></li>
+            <li><b class="legend-term" data-i18n="faa_GS">Ground stop</b><span data-i18n="legend_gs">Flights going to this airport wait at their departure airports until the time shown.</span></li>
+            <li><b class="legend-term" data-i18n="faa_GDP">Ground delay program</b><span data-i18n="legend_gdp">Flights going to this airport get later departure times to space out arrivals. The average delay is shown.</span></li>
+            <li><b class="legend-term" data-i18n="faa_DLY">Delays</b><span data-i18n="legend_dly">Departures or arrivals are running late. The minutes are shown.</span></li>
+            <li><b class="legend-term" data-i18n="faa_CLOSED">Closed</b><span data-i18n="legend_closed">The airport is closed.</span></li>
+          </ul>
+          <p class="legend-head" data-i18n="legend_reports">Tap an airport to see:</p>
+          <ul class="legend-list">
+            <li><b class="legend-term">METAR</b><span data-i18n="legend_metar">The latest weather report, usually every hour.</span></li>
+            <li><b class="legend-term">TAF</b><span data-i18n="legend_taf">The forecast for the next 24 to 30 hours.</span></li>
+          </ul>
+          <p class="legend-note" data-i18n="legend_sources">Sources: NOAA Aviation Weather Center (weather) and FAA NAS Status (delays).</p>
+        </details>
+      </details>
+    </section>
     <section id="toolbar"></section>
     <section id="results" tabindex="-1"></section>
   </main>

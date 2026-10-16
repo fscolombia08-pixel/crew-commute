@@ -12,6 +12,8 @@ What it shows for each option:
 - **Quick trips:** one-tap searches for your usual routes (set in `config.js`)
 - **Inbound plane check:** is the aircraft for your flight late on its previous leg?
 - Weather (METAR/TAF) and FAA ground stops and delay programs at every airport on the trip
+- **Check any airport:** type any airport in "Airport conditions now" to see its weather and FAA delays, even without a search. A **"What do these mean?"** legend explains VFR, MVFR, IFR, LIFR, ground stops and delay programs in plain words.
+- **Reset filters:** one button puts all filters back to normal. When filters hide flights, the results also offer **Clear filters**.
 - English and Spanish, light and dark theme, works on phones, tablets and computers, can be added to the home screen, saves your usual trips
 - **Airline logos** next to each airline code. They can be turned off in Settings.
 - **Easy start for friends:** when someone opens the site, a welcome pop-up asks for the **access code** (on the site, the group code is called the access code).
@@ -96,7 +98,7 @@ Send them the site link and the group code privately (for example in WhatsApp). 
 - In Settings (gear icon) they can see how the code is saved, change it, or tap **Forget code**.
 - If you change `ACCESS_CODE` in Cloudflare, everyone's saved code stops working. The pop-up then asks for the new code.
 
-- **iPhone:** open the site in Safari, tap **Share**, then **Add to Home Screen**.
+- **iPhone:** open the site in Safari, tap **Share**, then **Add to Home Screen**. The top bar stays at the top in one solid color, which keeps the top of the screen sharp in the home-screen app.
 - **Android:** open it in Chrome, tap **⋮**, then **Add to Home screen** (or **Install app**).
 
 ---
