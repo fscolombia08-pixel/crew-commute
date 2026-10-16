@@ -107,6 +107,10 @@ img, svg { max-width: 100%; }
   background: var(--banner-bg); color: var(--banner-ink); border: 1px solid var(--banner-line); position: relative; z-index: 2;
 }
 .banner:not([hidden]) + .wrap .search-card { margin-top: 0; }
+.banner-btn {
+  margin-left: 6px; border: 1px solid var(--banner-ink); background: transparent; color: var(--banner-ink); font: inherit;
+  font-weight: 700; border-radius: 999px; padding: 2px 10px; cursor: pointer; min-height: 26px;
+}
 
 /* ---------- layout ---------- */
 .wrap {
@@ -403,26 +407,43 @@ dialog:not([open]) { display: none; }
 .grid2 { display: grid; grid-template-columns: 1fr; gap: 16px; }
 .chip-select { display: flex; flex-wrap: wrap; gap: 6px; }
 
-/* welcome / group code pop-up */
+/* welcome / access code pop-up */
 .code-dlg { width: 440px; }
 .code-dlg .dlg-body { padding: 22px; gap: 14px; }
-.welcome-logo { width: 52px; height: 52px; color: #2a6ff0; }
+.code-top { display: flex; align-items: center; gap: 8px; }
+.code-top .code-lang { margin-left: auto; }
+.code-top .icon-btn { color: var(--ink); border-color: var(--line-2); background: var(--surface-2); flex: none; }
+.welcome-logo { width: 52px; height: 52px; color: #2a6ff0; flex: none; }
 .code-dlg h2 { margin: 0; font-size: 1.3rem; }
 .code-dlg p { margin: 0; color: var(--ink-2); }
-.code-dlg input { height: 50px; font-size: 18px; letter-spacing: .02em; }
+.code-input { display: flex; gap: 8px; }
+.code-input input { flex: 1; min-width: 0; height: 50px; font-size: 18px; letter-spacing: .02em; }
+.code-input .ghost { flex: none; min-width: 74px; }
+.check.remember { align-items: flex-start; gap: 10px; margin-top: 0; }
+.check.remember input { margin-top: 2px; }
+.check.remember small { display: block; color: var(--muted); font-size: .84rem; margin-top: 2px; }
 .code-dlg .primary { width: 100%; }
-.code-err { color: var(--bad); font-weight: 600; font-size: .92rem; min-height: 1.2em; }
-.code-lang { display: flex; justify-content: center; gap: 6px; }
+.code-err { color: var(--bad); font-weight: 600; font-size: .92rem; }
+.code-err:empty { display: none; }
+.code-lang { display: flex; gap: 6px; }
+.code-lang .mini-btn.on { border-color: var(--brand); color: var(--brand); font-weight: 700; }
+.code-or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .85rem; margin: -4px 0; }
+.code-or::before, .code-or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.explore-btn { width: 100%; min-height: 46px; }
+.code-dlg .explore-hint { margin-top: -6px; text-align: center; font-size: .84rem; color: var(--muted); }
+.code-status { margin: 2px 0 8px; }
 /* phones turned sideways: keep the pop-up short */
 @media (max-height: 520px) {
   .welcome-logo { display: none; }
-  .code-dlg .dlg-body { padding: 16px 22px; gap: 10px; }
+  .code-dlg .dlg-body { padding: 14px 20px; gap: 9px; }
+  .code-dlg h2 { font-size: 1.15rem; }
 }
 
 /* ---------- touch screens: bigger targets ---------- */
 @media (pointer: coarse) {
   .ghost.sm { min-height: 40px; padding: 8px 13px; }
   .mini-btn { min-height: 36px; padding: 6px 14px; }
+  .banner-btn { min-height: 34px; padding: 4px 12px; }
   .al-chip { min-height: 38px; }
   .ap-chip-x { width: 34px; height: 34px; }
 }

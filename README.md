@@ -13,7 +13,11 @@ What it shows for each option:
 - **Inbound plane check:** is the aircraft for your flight late on its previous leg?
 - Weather (METAR/TAF) and FAA ground stops and delay programs at every airport on the trip
 - English and Spanish, light and dark theme, works on phones, tablets and computers, can be added to the home screen, saves your usual trips
-- **Easy start for friends:** the first time someone opens the site, a welcome pop-up asks for the group code. They type it once on that phone or computer.
+- **Easy start for friends:** when someone opens the site, a welcome pop-up asks for the **access code** (on the site, the group code is called the access code).
+  - On their own phone they tick **Remember me on this device**.
+  - On a shared or public computer they leave it unticked, and the code is forgotten when the browser tab is closed.
+  - For safety, the site asks for the code again every 5 days.
+- **Explore with demo flights:** people without a code can try the site with made-up flights. Demo mode never contacts your helper, so it uses none of your flight-data units.
 
 > **Important:** Crew Commute only finds flights. It does **not** show loads, open seats or the standby list. Always check loads and list in your airline's employee travel app.
 
@@ -46,7 +50,7 @@ You need three free accounts: **GitHub**, **Cloudflare** and **RapidAPI** (for A
 4. Open the `crew-commute` folder on your computer. Select **everything inside it** (Ctrl+A) and drag it into the browser window. Drag the files and folders that are inside, not the `crew-commute` folder itself.
 5. Wait until all files are listed, then click **Commit changes**.
 6. Go to **Settings → Pages**. Under **Build and deployment**, set Source to **Deploy from a branch**, Branch to **main**, and the folder to **/ (root)**. Click **Save**.
-7. After 1–2 minutes your site is live at `https://YOUR-GITHUB-NAME.github.io/crew-commute/`. When it opens, a welcome pop-up asks for the group code. Searches work once Step 2 is done.
+7. After 1–2 minutes your site is live at `https://YOUR-GITHUB-NAME.github.io/crew-commute/`. When it opens, a welcome pop-up asks for the access code (your group code). Real searches work once Step 2 is done.
 
 ### Step 2: Create the Cloudflare helper
 
@@ -61,7 +65,7 @@ Cloudflare sometimes renames menu items. If a name below looks a little differen
 
    | Name | Type | Value |
    |---|---|---|
-   | `ACCESS_CODE` | **Secret** | Your group code, for example `mango-runway-blue-42` (make up your own) |
+   | `ACCESS_CODE` | **Secret** | Your group code, for example `mango-runway-blue-42` (make up your own). On the site it's called the **access code**. |
    | `ADB_KEY` | **Secret** | Your RapidAPI key for AeroDataBox (see below) |
    | `ALLOWED_ORIGINS` | Text | `https://YOUR-GITHUB-NAME.github.io` (no `/crew-commute` at the end) |
    | `MONTHLY_UNITS` | Text | `400` on the free plan (`5000` on Pro) |
@@ -76,15 +80,20 @@ Cloudflare sometimes renames menu items. If a name below looks a little differen
 Your helper address is already saved in `config.js`, so nobody ever has to type it:
 `apiBase: "https://crew-commute-helper.fscolombia08.workers.dev"`
 
-1. Open your site. The welcome pop-up asks for the group code.
-2. Type the code (the same as `ACCESS_CODE` in Cloudflare) and tap **Continue**. The site checks it and remembers it on that device.
+1. Open your site. The welcome pop-up asks for the access code.
+2. Type your group code (the same as `ACCESS_CODE` in Cloudflare). On your own phone or computer, tick **Remember me on this device**. Tap **Continue**. The site checks the code before it saves it.
 3. Search! The flights are real.
 
 If you ever create a new helper, open `config.js` on GitHub, click the pencil icon (Edit), change the address between the quotes, and click **Commit changes**.
 
 ### Step 4: Share it with your friends
 
-Send them the site link and the group code privately (for example in WhatsApp). The first time they open the link, the welcome pop-up asks for the code. They type it once and the site remembers it. They can change it later in Settings (gear icon).
+Send them the site link and the group code privately (for example in WhatsApp). Tell them it goes in the **access code** box.
+
+- On their own phone they tick **Remember me on this device**. The site then asks again only every 5 days.
+- On a shared or public computer they leave the box unticked. The code is forgotten when they close the tab.
+- In Settings (gear icon) they can see how the code is saved, change it, or tap **Forget code**.
+- If you change `ACCESS_CODE` in Cloudflare, everyone's saved code stops working. The pop-up then asks for the new code.
 
 - **iPhone:** open the site in Safari, tap **Share**, then **Add to Home Screen**.
 - **Android:** open it in Chrome, tap **⋮**, then **Add to Home screen** (or **Install app**).
@@ -144,12 +153,13 @@ The route network (T-100) and on-time history come from free BTS downloads. To r
 | Message | Fix |
 |---|---|
 | "That code didn't work" (in the welcome pop-up) | Type the code exactly as in Cloudflare's `ACCESS_CODE`. Capital letters don't matter. |
+| It keeps asking for the code | This is on purpose. It asks every 5 days. If **Remember me on this device** wasn't ticked, it also asks on every new visit. |
 | "Too many wrong codes" | The helper pauses for 15 minutes after several wrong codes from the same connection. Wait, then try again. |
 | "Can't reach the flight-data helper" | Check `apiBase` in `config.js`, and check that `ALLOWED_ORIGINS` is `https://YOUR-GITHUB-NAME.github.io` with no slash and nothing after it. |
 | "The flight data key was refused" | Check `ADB_KEY`, and check that you are subscribed to AeroDataBox on RapidAPI. |
 | "This month's flight-data limit is used up" | The plan's units are used up. It resets next month, or you can upgrade. |
 | No flights for a small airport | Flight-data coverage of very small airlines can be incomplete. Try a nearby bigger airport. |
-| Still in demo mode | Make sure `config.js` has your helper address. Open the site with `?admin`, and in Settings make sure "Use demo data" is off. |
+| Still in demo mode | If the yellow banner has an **Enter access code** button, tap it and type the code (someone chose **Explore with demo flights**). Otherwise, make sure `config.js` has your helper address, then open the site with `?admin` and check that "Use demo data" is off in Settings. |
 
 ---
 

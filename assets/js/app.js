@@ -127,13 +127,18 @@
     fillSelects();
     drawChips('from');   /* placeholders, "Nearby" and the remove buttons in the new language */
     drawChips('to');
+    drawCodeTexts();
+    drawCodeStatus();
     renderTrips();
     render();
     refreshUsage(true);
   }
 
   function updateDemoBanner() {
-    $('#demoBanner').hidden = !CC.api.isDemo();
+    const demo = CC.api.isDemo();
+    $('#demoBanner').hidden = !demo;
+    /* visitors exploring the demo can switch to real data with a code */
+    $('#demoExit').hidden = !(demo && CC.api.base() && !ST.get('forceDemo'));
   }
 
   /* ================= airport pickers ================= */
@@ -420,7 +425,7 @@
       twoStopLoaded = true;
     }
 
-    st.run = { q, pool, itins, errors, plan, hubs, dates, arriveByUtc, reportUtc, twoStopLoaded, fatal, total: plan.length };
+    st.run = { q, pool, itins, errors, plan, hubs, dates, arriveByUtc, reportUtc, twoStopLoaded, fatal, total: plan.length, demo: CC.api.isDemo() };
     st.shown = 25;
     st.include = [];
     st.busy = false;
@@ -429,7 +434,7 @@
     writeHash(q);
     if (fatal) {
       setStatus('error', esc(errorText(fatal)));
-      if (fatal.code === 'bad_code') { ST.set('groupCode', ''); openCodeDialog(t('code_wrong')); }
+      if (fatal.code === 'bad_code') { ST.forgetCode(); openCodeDialog('code_wrong'); }
     } else if (errors.length) {
       setStatus('warn', esc(t('err_partial', { n: errors.length, total: plan.length })) + '<br><small>' + esc(errorText(errors[0].e)) + '</small>');
     } else {
@@ -496,6 +501,8 @@
       el.textContent = (u && u.limit && !u.demo) ? t('data_used', { u: u.used, l: u.limit }) : '';
     } catch (e) {
       if (!quiet) el.textContent = '';
+      /* the saved code stopped working (for example the owner changed it): ask right away */
+      if (e && e.code === 'bad_code') { ST.forgetCode(); openCodeDialog('code_wrong'); }
     }
   }
 
@@ -855,6 +862,7 @@
     } catch (e) {
       st.inbound[leg.id] = { state: 'error', error: e };
       if (e && (e.code === 'bad_code' || e.code === 'limit')) setStatus('error', esc(errorText(e)));
+      if (e && e.code === 'bad_code') { ST.forgetCode(); openCodeDialog('code_wrong'); }
     }
     delete st.inboundBusy[leg.id];
     rerenderCard(it);
@@ -1022,63 +1030,142 @@
     }
   }
 
-  /* ================= group code pop-up ================= */
-  let afterCode = null;   /* what to do once the code is accepted (e.g. run a shared search) */
-  function needsCode() { return !CC.api.isDemo() && !ST.get('groupCode'); }
-  function openCodeDialog(message) {
+  /* ================= access code pop-up ================= */
+  /* People see "access code". Inside the code it is still the group code (Cloudflare: ACCESS_CODE). */
+  let afterCode = null;     /* what to do once a code is accepted or demo is chosen (e.g. run a shared search) */
+  let codeErrFn = null;     /* the current pop-up message, kept as a function so it follows a language change */
+  let wantCodeDialog = false;
+  function needsCode() { return !CC.api.isDemo() && !ST.code(); }
+  function codeDialogOpen() { const d = $('#codeDlg'); return !!(d.open || d.hasAttribute('open')); }
+  function setCodeErr(fn) {
+    codeErrFn = fn || null;
+    $('#codeErr').textContent = codeErrFn ? codeErrFn() : '';
+  }
+  /* Texts in the pop-up that depend on the situation (also redrawn when the language changes). */
+  function drawCodeTexts() {
+    $('#codeIntro').textContent = ST.codeExpired() ? t('code_expired') : t('welcome_text');
+    $('#codeShow').textContent = $('#codeEntry').type === 'password' ? t('show') : t('hide');
+    if (codeErrFn) $('#codeErr').textContent = codeErrFn();
+    $$('[data-setlang]').forEach(b => {
+      const on = b.dataset.setlang === lang();
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-pressed', String(on));
+    });
+  }
+  function openCodeDialog(errKey) {
+    if (!CC.api.base()) return;               /* no helper set up: the site only has demo data */
     const dlg = $('#codeDlg');
-    $('#codeErr').textContent = message || '';
-    $('#codeEntry').value = ST.get('groupCode') || '';
-    openDialog(dlg);
-    setTimeout(() => { try { $('#codeEntry').focus(); } catch (e) { /* ignore */ } }, 50);
+    const entry = $('#codeEntry');
+    if (!codeDialogOpen()) {
+      entry.value = '';
+      entry.type = 'password';
+      $('#codeRemember').checked = !!ST.get('rememberDevice');
+    }
+    setCodeErr(errKey ? () => t(errKey) : null);
+    const canClose = !needsCode();
+    $('#codeClose').hidden = !canClose;
+    /* "Explore with demo flights" is only for people who have no code yet and aren't exploring already */
+    const offerDemo = !ST.code() && !ST.exploring();
+    $('#exploreBtn').hidden = !offerDemo;
+    $('.code-or').hidden = !offerDemo;
+    $('.explore-hint').hidden = !offerDemo;
+    drawCodeTexts();
+    if (!codeDialogOpen()) openDialog(dlg);
+    setTimeout(() => { try { entry.focus(); } catch (e) { /* ignore */ } }, 50);
+  }
+  /* After a code is accepted or demo is chosen: run what was waiting, or redo a search that had no data. */
+  function codeAccepted(rerun) {
+    const next = afterCode; afterCode = null;
+    if (next) next();
+    else if (st.run && (rerun || st.run.fatal)) search();
+    refreshUsage(true);
   }
   function setupCodeDialog() {
     const dlg = $('#codeDlg');
-    /* the site can't work without the code: Esc doesn't close this pop-up */
+    /* the site needs a code or demo mode: Esc doesn't close the pop-up until one is chosen */
     dlg.addEventListener('cancel', (e) => { if (needsCode()) e.preventDefault(); });
+    $('#codeClose').addEventListener('click', () => { if (!needsCode()) closeDialog(dlg); });
+    $('#codeShow').addEventListener('click', () => {
+      const i = $('#codeEntry');
+      i.type = i.type === 'password' ? 'text' : 'password';
+      drawCodeTexts();
+      try { i.focus(); } catch (e) { /* ignore */ }
+    });
     $('#codeForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const btn = $('#codeGo');
+      if (btn.disabled) return;
       const code = $('#codeEntry').value.trim();
-      const err = $('#codeErr'), btn = $('#codeGo');
-      if (!code) { err.textContent = t('code_empty'); return; }
-      err.textContent = '';
+      if (!code) { setCodeErr(() => t('code_empty')); return; }
+      setCodeErr(null);
       btn.disabled = true;
       btn.classList.add('busy');
       const label = $('span', btn);
       if (label) label.textContent = t('checking');
-      ST.set('groupCode', code);
-      CC.api.clearCache();
       try {
-        await CC.api.ping();
+        await CC.api.ping(code);                  /* checked first, so a wrong code is never saved */
+        const wasDemo = !!(st.run && st.run.demo);
+        ST.saveCode(code, $('#codeRemember').checked);
+        ST.setExploring(false);
+        CC.api.clearCache();
+        $('#codeEntry').value = '';
+        drawCodeTexts();
         closeDialog(dlg);
-        const next = afterCode; afterCode = null;
-        if (next) next();
-        else if (st.run && st.run.fatal) search();
-        refreshUsage(true);
+        updateDemoBanner();
+        codeAccepted(wasDemo);                    /* demo results are replaced by real ones */
       } catch (ex) {
-        if (ex && ex.code === 'bad_code') { ST.set('groupCode', ''); err.textContent = t('code_wrong'); }
-        else err.textContent = errorText(ex);
+        if (ex && ex.code === 'bad_code') setCodeErr(() => t('code_wrong'));
+        else setCodeErr(() => errorText(ex));
       } finally {
         btn.disabled = false;
         btn.classList.remove('busy');
         if (label) label.textContent = t('continue');
       }
     });
+    $('#exploreBtn').addEventListener('click', () => {
+      ST.setExploring(true);                      /* this visit only; no calls to the helper at all */
+      CC.api.clearCache();
+      $('#codeEntry').value = '';
+      setCodeErr(null);
+      closeDialog(dlg);
+      updateDemoBanner();
+      codeAccepted(false);
+    });
+    $('#demoExit').addEventListener('click', () => openCodeDialog());
     dlg.addEventListener('click', (e) => {
       const b = e.target.closest('[data-setlang]');
       if (b) { ST.set('lang', b.dataset.setlang); applyLang(); }
+    });
+    /* the code expires after a few days: check again when the site comes back on screen */
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && needsCode() && !codeDialogOpen()) openCodeDialog();
     });
   }
 
   /* ================= settings ================= */
   const adminMode = /[?&#]admin\b/.test(location.search + location.hash);
   let connAtOpen = null, demoAtOpen = null;
+  function fmtDay(ms) {
+    try { return new Date(ms).toLocaleDateString(lang() === 'es' ? 'es' : 'en-US', { weekday: 'short', month: 'short', day: 'numeric' }); }
+    catch (e) { return new Date(ms).toDateString(); }
+  }
+  /* Access code status in Settings: saved on this device, only for this visit, or demo. */
+  function drawCodeStatus() {
+    $('#codeField').hidden = !CC.api.base();
+    const info = ST.codeInfo();
+    let text;
+    if (info) text = info.remembered ? t('code_saved_until', { d: fmtDay(info.askAgainAt) }) : t('code_session');
+    else if (CC.api.isDemo()) text = t('code_demo_status');
+    else text = t('code_none');
+    $('#codeStatus').textContent = text;
+    $('#changeCodeBtn').textContent = info ? t('change_code') : t('enter_code');
+    $('#forgetCodeBtn').hidden = !info;
+  }
   function openSettings() {
     const dlg = $('#settingsDlg');
     connAtOpen = connKey();
     demoAtOpen = CC.api.isDemo();
-    $('#codeInput').value = ST.get('groupCode') || '';
-    $('#codeField').hidden = CC.api.isDemo() && !adminMode;
+    drawCodeStatus();
     $('#adminBox').hidden = !adminMode;
     $('#apiInput').value = ST.get('apiBase') || (root.CREW_CONFIG && root.CREW_CONFIG.apiBase) || '';
     $('#demoToggle').checked = !!ST.get('forceDemo');
@@ -1087,7 +1174,6 @@
     $$('input[name=theme]').forEach(r => { r.checked = r.value === (ST.get('theme') || 'auto'); });
     $('#backupsWanted').value = String(ST.get('backupsWanted'));
     drawMyAirlines();
-    $('#testOut').textContent = '';
     openDialog(dlg);
   }
   function drawMyAirlines() {
@@ -1095,9 +1181,8 @@
     $('#myAirlines').innerHTML = MY_AIRLINE_CHOICES.filter(c => hiddenAirlines().indexOf(c) < 0).map(c =>
       `<button type="button" class="al-chip${mine.has(c) ? ' on' : ''}" data-my="${esc(c)}" aria-pressed="${mine.has(c)}">${esc(c)} <small>${esc(AL.name(c))}</small></button>`).join('');
   }
-  function connKey() { return [ST.get('groupCode'), ST.get('apiBase'), ST.get('forceDemo')].join('|'); }
+  function connKey() { return [ST.code(), ST.get('apiBase'), ST.get('forceDemo'), ST.exploring()].join('|'); }
   function saveSettingsInputs() {
-    ST.set('groupCode', $('#codeInput').value.trim());
     if (adminMode) {
       const api = $('#apiInput').value.trim();
       const cfgBase = (root.CREW_CONFIG && root.CREW_CONFIG.apiBase) || '';
@@ -1112,12 +1197,17 @@
     $('#settingsForm').addEventListener('submit', (e) => { e.preventDefault(); closeDialog(dlg); });
     $('.dlg-close', dlg).addEventListener('click', () => closeDialog(dlg));
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !hasDialog && dlg.hasAttribute('open')) closeDialog(dlg);
+      if (e.key !== 'Escape' || hasDialog) return;
+      if (dlg.hasAttribute('open')) closeDialog(dlg);
+      else if (codeDialogOpen() && !needsCode()) closeDialog($('#codeDlg'));
     });
-    $('#codeShow').addEventListener('click', () => {
-      const i = $('#codeInput');
-      i.type = i.type === 'password' ? 'text' : 'password';
-      $('#codeShow').textContent = i.type === 'password' ? t('show') : t('hide');
+    $('#changeCodeBtn').addEventListener('click', () => { wantCodeDialog = true; closeDialog(dlg); });
+    $('#forgetCodeBtn').addEventListener('click', () => {
+      ST.forgetCode();
+      ST.setExploring(false);
+      CC.api.clearCache();
+      updateDemoBanner();
+      closeDialog(dlg);                         /* the pop-up then asks for a code (or demo) again */
     });
     $('#myAirlines').addEventListener('click', (e) => {
       const b = e.target.closest('[data-my]');
@@ -1130,23 +1220,6 @@
     $$('input[name=lang]').forEach(r => r.addEventListener('change', () => { ST.set('lang', r.value); applyLang(); drawMyAirlines(); }));
     $$('input[name=tfmt]').forEach(r => r.addEventListener('change', () => { ST.set('timeFmt', r.value); render(); }));
     $('#backupsWanted').addEventListener('change', (e) => { ST.set('backupsWanted', +e.target.value); render(); });
-    $('#testBtn').addEventListener('click', async () => {
-      saveSettingsInputs();
-      CC.api.clearCache();
-      const out = $('#testOut');
-      out.className = 'hint';
-      out.textContent = t('testing');
-      if (CC.api.isDemo()) { out.textContent = t('conn_demo'); out.className = 'hint warn-text'; return; }
-      try {
-        await CC.api.ping();
-        const u = await CC.api.usage();
-        out.textContent = u && u.limit && u.used != null ? t('conn_ok', { u: u.used, l: u.limit }) : t('conn_ok_nolimit');
-        out.className = 'hint ok-text';
-      } catch (e) {
-        out.textContent = e && e.code === 'bad_code' ? t('code_wrong') : errorText(e);
-        out.className = 'hint warn-text';
-      }
-    });
     $('#resetBtn').addEventListener('click', () => {
       if (confirm(t('reset_confirm'))) { ST.reset(); location.hash = ''; location.reload(); }
     });
@@ -1155,9 +1228,12 @@
       const changed = connKey() !== connAtOpen || CC.api.isDemo() !== demoAtOpen;
       if (changed) CC.api.clearCache();
       applyLang();
-      if (needsCode()) { openCodeDialog(); return; }
+      if (wantCodeDialog || needsCode()) {
+        wantCodeDialog = false;
+        openCodeDialog();
+        return;
+      }
       if (st.run && (changed || st.run.fatal)) search();
-      else if (st.run) render();
     });
   }
 

@@ -56,6 +56,7 @@
 
   <div id="demoBanner" class="banner" hidden>
     <span data-i18n="demo_banner"></span>
+    <button type="button" class="banner-btn" id="demoExit" data-i18n="enter_code" hidden>Enter access code</button>
   </div>
 
   <main class="wrap">
@@ -199,14 +200,11 @@
       </div>
 
       <div class="field" id="codeField">
-        <label class="lbl" for="codeInput" data-i18n="group_code">Group code</label>
+        <span class="lbl" data-i18n="access_code">Access code</span>
+        <p class="hint code-status" id="codeStatus"></p>
         <div class="inline">
-          <input id="codeInput" type="password" autocomplete="off" autocapitalize="none" spellcheck="false">
-          <button type="button" class="ghost" id="codeShow" data-i18n="show">Show</button>
-        </div>
-        <div class="inline" style="margin-top:8px">
-          <button type="button" class="ghost" id="testBtn" data-i18n="test_connection">Check code</button>
-          <span id="testOut" class="hint" aria-live="polite"></span>
+          <button type="button" class="ghost sm" id="changeCodeBtn">Change code</button>
+          <button type="button" class="ghost sm" id="forgetCodeBtn" data-i18n="forget_code">Forget code</button>
         </div>
       </div>
 
@@ -261,22 +259,36 @@
 
   <dialog id="codeDlg" class="dlg code-dlg" aria-labelledby="codeTitle">
     <form class="dlg-body" id="codeForm" novalidate autocomplete="off">
-      <svg class="welcome-logo" viewBox="0 0 32 32" aria-hidden="true">
-        <rect width="32" height="32" rx="8" fill="currentColor"/>
-        <path d="M7 23 C 11 10, 21 8, 25 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="0.1 4.2"/>
-        <circle cx="7" cy="23" r="2.6" fill="#fff"/>
-        <path d="M21.5 6.2 L27.2 9.1 L21.8 12.3 L22.9 9.4 Z" fill="#ffb547"/>
-      </svg>
+      <div class="code-top">
+        <svg class="welcome-logo" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="currentColor"/>
+          <path d="M7 23 C 11 10, 21 8, 25 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="0.1 4.2"/>
+          <circle cx="7" cy="23" r="2.6" fill="#fff"/>
+          <path d="M21.5 6.2 L27.2 9.1 L21.8 12.3 L22.9 9.4 Z" fill="#ffb547"/>
+        </svg>
+        <div class="code-lang">
+          <button type="button" class="mini-btn" data-setlang="en" lang="en">English</button>
+          <button type="button" class="mini-btn" data-setlang="es" lang="es">Español</button>
+        </div>
+        <button type="button" class="icon-btn dlg-close" id="codeClose" data-i18n-aria="close" hidden>✕</button>
+      </div>
       <h2 id="codeTitle" data-i18n="welcome_title">Welcome to Crew Commute</h2>
-      <p data-i18n="welcome_text">Type the group code you received to start searching.</p>
-      <label class="sr-only" for="codeEntry" data-i18n="group_code">Group code</label>
-      <input id="codeEntry" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" data-i18n-ph="group_code">
+      <p id="codeIntro">Enter your access code to see real flights.</p>
+      <label class="sr-only" for="codeEntry" data-i18n="access_code">Access code</label>
+      <div class="code-input">
+        <input id="codeEntry" type="password" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" data-i18n-ph="access_code">
+        <button type="button" class="ghost" id="codeShow" aria-controls="codeEntry">Show</button>
+      </div>
+      <label class="check remember">
+        <input type="checkbox" id="codeRemember">
+        <span><b data-i18n="remember_device">Remember me on this device</b>
+          <small data-i18n="remember_hint">Only on your own phone or computer. We ask for the code again every 5 days.</small></span>
+      </label>
       <div class="code-err" id="codeErr" role="alert"></div>
       <button type="submit" class="primary" id="codeGo"><span data-i18n="continue">Continue</span></button>
-      <div class="code-lang">
-        <button type="button" class="mini-btn" data-setlang="en">English</button>
-        <button type="button" class="mini-btn" data-setlang="es">Español</button>
-      </div>
+      <div class="code-or" aria-hidden="true"><span data-i18n="or">or</span></div>
+      <button type="button" class="ghost explore-btn" id="exploreBtn" data-i18n="explore_demo">Explore with demo flights</button>
+      <p class="hint explore-hint" data-i18n="explore_hint">No code? Try the site with made-up flights. No real data is used.</p>
     </form>
   </dialog>
 

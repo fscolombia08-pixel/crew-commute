@@ -17,7 +17,9 @@
     var b = setting('apiBase') || cfg().apiBase || '';
     return String(b).trim().replace(/\/+$/, '');
   };
-  api.isDemo = function () { return !api.base() || setting('forceDemo') === true; };
+  /* Demo data: no helper set up, the owner turned on demo data (?admin), or a visitor chose "Explore with demo flights". */
+  api.isDemo = function () { return !api.base() || setting('forceDemo') === true || !!(CC.store && CC.store.exploring()); };
+  function accessCode() { return CC.store ? CC.store.code() : ''; }
 
   function ApiError(code, message, status) {
     var e = new Error(message || code);
@@ -29,7 +31,7 @@
   function wait(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
   /* ttlMs: how long this answer stays fresh in the page (the helper has its own, longer cache). */
-  async function getJson(path, params, asText, ttlMs) {
+  async function getJson(path, params, asText, ttlMs, codeToTry) {
     var url = new URL(api.base() + path);
     Object.keys(params || {}).forEach(function (k) { if (params[k] != null) url.searchParams.set(k, params[k]); });
     var key = url.toString();
@@ -40,7 +42,8 @@
       var timer = ctrl ? setTimeout(function () { ctrl.abort(); }, 25000) : null;
       var res;
       try {
-        res = await fetch(key, { headers: { 'X-Crew-Code': setting('groupCode') || '' }, signal: ctrl ? ctrl.signal : undefined });
+        var sendCode = codeToTry != null ? codeToTry : accessCode();
+        res = await fetch(key, { headers: { 'X-Crew-Code': sendCode || '' }, signal: ctrl ? ctrl.signal : undefined });
       } catch (err) {
         throw ApiError('network', 'Network error');
       } finally {
@@ -110,11 +113,12 @@
     return u;
   };
 
-  /* Check the helper address and group code. */
-  api.ping = async function () {
-    if (api.isDemo()) return { ok: true, demo: true };
+  /* Check the access code with the helper. With codeToTry, that code is checked before it is saved. */
+  api.ping = async function (codeToTry) {
+    if (codeToTry == null && api.isDemo()) return { ok: true, demo: true };
+    if (!api.base()) throw ApiError('network', 'No helper address in config.js');
     memo.forEach(function (v, k) { if (k.indexOf('/api/usage') >= 0 || k.indexOf('/api/ping') >= 0) memo.delete(k); });
-    return getJson('/api/ping', { t: Date.now() }, false, 1000);
+    return getJson('/api/ping', { t: Date.now() }, false, 1000, codeToTry);
   };
 
   api.clearCache = function () { memo.clear(); };
