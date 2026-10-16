@@ -7,6 +7,16 @@
   <meta name="description" content="One-way flight finder for airline crew: every airline, every connection.">
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#0f2a4a">
+  <meta name="color-scheme" content="light dark">
+  <script>
+    /* Set light/dark theme before the page paints. "auto" follows the device. */
+    (function () {
+      var pref = 'auto';
+      try { pref = (JSON.parse(localStorage.getItem('crew-commute-v1') || '{}').theme) || 'auto'; } catch (e) {}
+      var dark = pref === 'dark' || (pref !== 'light' && !!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches));
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    })();
+  </script>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Crew Commute">
   <link rel="manifest" href="manifest.webmanifest">
@@ -33,6 +43,10 @@
       </a>
       <div class="top-actions">
         <button type="button" id="langBtn" class="pill-btn" aria-label="Español / English">ES</button>
+        <button type="button" id="themeBtn" class="icon-btn theme-btn" data-i18n-aria="theme_toggle">
+          <svg class="ic-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <svg class="ic-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
         <button type="button" id="settingsBtn" class="icon-btn" data-i18n-aria="settings">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Zm8.2 4.7-.1-2.6 2-1.6-2-3.5-2.4.9a7.7 7.7 0 0 0-2.2-1.3L15 2.6h-4l-.5 2.6c-.8.3-1.5.7-2.2 1.3l-2.4-.9-2 3.5 2 1.6a7.6 7.6 0 0 0 0 2.6l-2 1.6 2 3.5 2.4-.9c.7.6 1.4 1 2.2 1.3l.5 2.6h4l.5-2.6c.8-.3 1.5-.7 2.2-1.3l2.4.9 2-3.5-2-1.6Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
         </button>
@@ -178,28 +192,31 @@
   </footer>
 
   <dialog id="settingsDlg" class="dlg" aria-labelledby="settingsTitle">
-    <form method="dialog" class="dlg-body" id="settingsForm">
+    <form class="dlg-body" id="settingsForm" novalidate>
       <div class="dlg-head">
         <h2 id="settingsTitle" data-i18n="settings">Settings</h2>
-        <button value="close" class="icon-btn" data-i18n-aria="close">✕</button>
+        <button type="button" class="icon-btn dlg-close" data-i18n-aria="close">✕</button>
       </div>
 
-      <div class="field">
+      <div class="field" id="codeField">
         <label class="lbl" for="codeInput" data-i18n="group_code">Group code</label>
         <div class="inline">
-          <input id="codeInput" type="password" autocomplete="off" spellcheck="false">
+          <input id="codeInput" type="password" autocomplete="off" autocapitalize="none" spellcheck="false">
           <button type="button" class="ghost" id="codeShow" data-i18n="show">Show</button>
         </div>
-        <p class="hint" data-i18n="group_code_help"></p>
+        <div class="inline" style="margin-top:8px">
+          <button type="button" class="ghost" id="testBtn" data-i18n="test_connection">Check code</button>
+          <span id="testOut" class="hint" aria-live="polite"></span>
+        </div>
       </div>
 
       <div class="field">
-        <label class="lbl" for="apiInput" data-i18n="helper_url">Helper address</label>
-        <input id="apiInput" type="url" placeholder="https://crew-commute-helper.yourname.workers.dev" spellcheck="false">
-      </div>
-      <div class="inline">
-        <button type="button" class="ghost" id="testBtn" data-i18n="test_connection">Test connection</button>
-        <span id="testOut" class="hint" aria-live="polite"></span>
+        <span class="lbl" data-i18n="theme">Theme</span>
+        <div class="radio-row">
+          <label><input type="radio" name="theme" value="auto"> <span data-i18n="theme_auto">Auto (device)</span></label>
+          <label><input type="radio" name="theme" value="light"> <span data-i18n="theme_light">Light</span></label>
+          <label><input type="radio" name="theme" value="dark"> <span data-i18n="theme_dark">Dark</span></label>
+        </div>
       </div>
 
       <div class="grid2">
@@ -229,11 +246,36 @@
         <div class="chip-select" id="myAirlines"></div>
       </div>
 
-      <label class="check"><input type="checkbox" id="demoToggle"> <span data-i18n="demo_mode">Use demo data</span></label>
+      <div id="adminBox" class="field" hidden>
+        <label class="lbl" for="apiInput" data-i18n="helper_url">Helper address</label>
+        <input id="apiInput" type="url" placeholder="https://crew-commute-helper.yourname.workers.dev" spellcheck="false">
+        <label class="check"><input type="checkbox" id="demoToggle"> <span data-i18n="demo_mode">Use demo data</span></label>
+      </div>
 
       <div class="dlg-foot">
         <button type="button" class="link-btn" id="resetBtn" data-i18n="reset_all">Clear my saved settings</button>
-        <button value="done" class="primary" data-i18n="done">Done</button>
+        <button type="submit" class="primary" data-i18n="done">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="codeDlg" class="dlg code-dlg" aria-labelledby="codeTitle">
+    <form class="dlg-body" id="codeForm" novalidate autocomplete="off">
+      <svg class="welcome-logo" viewBox="0 0 32 32" aria-hidden="true">
+        <rect width="32" height="32" rx="8" fill="currentColor"/>
+        <path d="M7 23 C 11 10, 21 8, 25 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="0.1 4.2"/>
+        <circle cx="7" cy="23" r="2.6" fill="#fff"/>
+        <path d="M21.5 6.2 L27.2 9.1 L21.8 12.3 L22.9 9.4 Z" fill="#ffb547"/>
+      </svg>
+      <h2 id="codeTitle" data-i18n="welcome_title">Welcome to Crew Commute</h2>
+      <p data-i18n="welcome_text">Type the group code you received to start searching.</p>
+      <label class="sr-only" for="codeEntry" data-i18n="group_code">Group code</label>
+      <input id="codeEntry" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" enterkeyhint="go" data-i18n-ph="group_code">
+      <div class="code-err" id="codeErr" role="alert"></div>
+      <button type="submit" class="primary" id="codeGo"><span data-i18n="continue">Continue</span></button>
+      <div class="code-lang">
+        <button type="button" class="mini-btn" data-setlang="en">English</button>
+        <button type="button" class="mini-btn" data-setlang="es">Español</button>
       </div>
     </form>
   </dialog>

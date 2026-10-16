@@ -9,7 +9,17 @@
   const $ = (s, el) => (el || document).querySelector(s);
   const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
 
-  const MY_AIRLINE_CHOICES = ['AA', 'UA', 'DL', 'WN', 'B6', 'AS', 'HA', 'F9', 'NK', 'G4', 'SY', 'MX', 'XP'];
+  const MY_AIRLINE_CHOICES = ['AA', 'UA', 'DL', 'WN', 'B6', 'AS', 'HA', 'F9', 'G4', 'SY', 'MX', 'XP'];
+  /* Airlines that are never shown (config.js hideAirlines; Spirit/NK stopped flying in May 2026). */
+  function hiddenAirlines() {
+    const list = (root.CREW_CONFIG && root.CREW_CONFIG.hideAirlines) || [];
+    return list.map(c => String(c).toUpperCase());
+  }
+  function cleanMyAirlines() {
+    const mine = ST.get('myAirlines') || [];
+    const keep = mine.filter(c => hiddenAirlines().indexOf(c) < 0);
+    if (keep.length !== mine.length) ST.set('myAirlines', keep);
+  }
 
   const st = {
     mode: 'find',
@@ -53,12 +63,15 @@
 
   /* ================= init ================= */
   function init() {
+    setupTheme();
+    cleanMyAirlines();
     fillSelects();
     restoreDefaults();
     setupPicker('from');
     setupPicker('to');
     setupForm();
     setupSettings();
+    setupCodeDialog();
     setupResultsEvents();
     applyLang();
     renderTrips();
@@ -67,7 +80,11 @@
     if (!fromHash) {
       $('#dateInput').value = T.deviceToday();
     }
-    if (fromHash && st.from.length && st.to.length) search();
+    const shared = fromHash && st.from.length && st.to.length;
+    if (needsCode()) {
+      if (shared) afterCode = () => search();
+      openCodeDialog();
+    } else if (shared) search();
     refreshUsage();
     if ('serviceWorker' in navigator && location.protocol === 'https:') {
       navigator.serviceWorker.register('sw.js').catch(() => {});
@@ -108,10 +125,8 @@
     $('#toLabel').textContent = st.mode === 'commute' ? t('to_base') : t('to');
     $('#dateLabel').textContent = st.mode === 'commute' ? t('report_date') : t('date');
     fillSelects();
-    $$('.ap-input').forEach(inp => {
-      const side = inp.closest('.ap-field').dataset.side;
-      inp.placeholder = st[side].length ? t('add_airport_ph') : t('airport_ph');
-    });
+    drawChips('from');   /* placeholders, "Nearby" and the remove buttons in the new language */
+    drawChips('to');
     renderTrips();
     render();
     refreshUsage(true);
@@ -330,6 +345,7 @@
     if (e.code === 'bad_code') return t('err_bad_code');
     if (e.code === 'limit' || e.code === 'provider_limit') return t('err_limit');
     if (e.code === 'network') return t('err_network');
+    if (e.code === 'slow_down') return t('err_slow_down');
     return t('err_server', { m: e.message || e.code });
   }
 
@@ -361,6 +377,7 @@
     if (q.from.some(c => q.to.indexOf(c) >= 0)) { setStatus('error', esc(t('err_same_airport'))); return; }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(q.date)) { $('#dateInput').value = q.date = T.deviceToday(); }
     if (q.mode === 'commute' && !q.report) { setStatus('error', esc(t('err_need_time'))); return; }
+    if (needsCode()) { afterCode = () => search(userStarted, opts); openCodeDialog(); return; }
 
     const seq = ++st.seq;
     st.busy = true;
@@ -412,7 +429,7 @@
     writeHash(q);
     if (fatal) {
       setStatus('error', esc(errorText(fatal)));
-      if (fatal.code === 'bad_code') openSettings();
+      if (fatal.code === 'bad_code') { ST.set('groupCode', ''); openCodeDialog(t('code_wrong')); }
     } else if (errors.length) {
       setStatus('warn', esc(t('err_partial', { n: errors.length, total: plan.length })) + '<br><small>' + esc(errorText(errors[0].e)) + '</small>');
     } else {
@@ -424,8 +441,10 @@
       const top = target.getBoundingClientRect().top;
       if (top > window.innerHeight * 0.6) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    loadConditions();
-    refreshUsage();
+    if (!fatal) {
+      loadConditions();
+      refreshUsage();
+    }
   }
 
   async function loadConditions() {
@@ -471,6 +490,7 @@
 
   async function refreshUsage(quiet) {
     const el = $('#usageLine');
+    if (needsCode()) { el.textContent = ''; return; }   /* never call the helper without a code */
     try {
       const u = await CC.api.usage();
       el.textContent = (u && u.limit && !u.demo) ? t('data_used', { u: u.used, l: u.limit }) : '';
@@ -498,7 +518,8 @@
     }), {
       departAfter: q.departAfter, departBefore: q.departBefore,
       arriveAfter: q.arriveAfter, arriveBefore: q.arriveBefore,
-      arriveByUtc: r.arriveByUtc, maxStops: effectiveStops(r), include, noRedeye: q.noRedeye
+      arriveByUtc: r.arriveByUtc, maxStops: effectiveStops(r), include, noRedeye: q.noRedeye,
+      exclude: hiddenAirlines()
     });
     list = E.prune(list, {});
     if (q.mode === 'commute') {
@@ -631,7 +652,7 @@
     const sorts = (r.q.mode === 'commute' ? ['plan'] : []).concat(['depart', 'arrive', 'late', 'duration', 'stops']);
     /* airline chips from all (unfiltered by airline) options */
     const counts = new Map();
-    const base = E.filter(r.itins, { departAfter: r.q.departAfter, departBefore: r.q.departBefore, arriveAfter: r.q.arriveAfter, arriveBefore: r.q.arriveBefore, arriveByUtc: r.arriveByUtc, maxStops: effectiveStops(r), noRedeye: r.q.noRedeye });
+    const base = E.filter(r.itins, { departAfter: r.q.departAfter, departBefore: r.q.departBefore, arriveAfter: r.q.arriveAfter, arriveBefore: r.q.arriveBefore, arriveByUtc: r.arriveByUtc, maxStops: effectiveStops(r), noRedeye: r.q.noRedeye, exclude: hiddenAirlines() });
     E.prune(base, {}).forEach(it => it.carriers.forEach(cc => counts.set(cc, (counts.get(cc) || 0) + 1)));
     const mine = new Set(ST.get('myAirlines') || []);
     const chips = Array.from(counts.entries()).sort((x, y) => y[1] - x[1]).map(([code, n]) =>
@@ -956,42 +977,143 @@
     };
   }
 
+  /* ================= dialogs (with a fallback for older phones) ================= */
+  const hasDialog = typeof HTMLDialogElement === 'function' && typeof document.createElement('dialog').showModal === 'function';
+  function openDialog(dlg) {
+    if (dlg.open || dlg.hasAttribute('open')) return;
+    if (hasDialog) { dlg.showModal(); return; }
+    dlg.setAttribute('open', '');
+    dlg.classList.add('dlg-fallback');
+    if (!$('.dlg-shade')) { const sh = document.createElement('div'); sh.className = 'dlg-shade'; document.body.appendChild(sh); }
+  }
+  function closeDialog(dlg) {
+    if (hasDialog) { if (dlg.open) dlg.close(); return; }
+    if (!dlg.hasAttribute('open')) return;
+    dlg.removeAttribute('open');
+    if (!$$('dialog[open]').length) { const sh = $('.dlg-shade'); if (sh) sh.remove(); }
+    dlg.dispatchEvent(new Event('close'));
+  }
+
+  /* ================= light / dark theme ================= */
+  const darkQuery = root.matchMedia ? root.matchMedia('(prefers-color-scheme: dark)') : null;
+  function effectiveTheme() {
+    const pref = ST.get('theme') || 'auto';
+    if (pref === 'light' || pref === 'dark') return pref;
+    return darkQuery && darkQuery.matches ? 'dark' : 'light';
+  }
+  function applyTheme() {
+    const th = effectiveTheme();
+    document.documentElement.setAttribute('data-theme', th);
+    const meta = $('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', th === 'dark' ? '#0b1730' : '#0f2a4a');
+    $$('input[name=theme]').forEach(r => { r.checked = r.value === (ST.get('theme') || 'auto'); });
+  }
+  function setupTheme() {
+    applyTheme();
+    $('#themeBtn').addEventListener('click', () => {
+      ST.set('theme', effectiveTheme() === 'dark' ? 'light' : 'dark');
+      applyTheme();
+    });
+    $$('input[name=theme]').forEach(r => r.addEventListener('change', () => { ST.set('theme', r.value); applyTheme(); }));
+    const onSystem = () => { if ((ST.get('theme') || 'auto') === 'auto') applyTheme(); };
+    if (darkQuery) {
+      if (darkQuery.addEventListener) darkQuery.addEventListener('change', onSystem);
+      else if (darkQuery.addListener) darkQuery.addListener(onSystem);
+    }
+  }
+
+  /* ================= group code pop-up ================= */
+  let afterCode = null;   /* what to do once the code is accepted (e.g. run a shared search) */
+  function needsCode() { return !CC.api.isDemo() && !ST.get('groupCode'); }
+  function openCodeDialog(message) {
+    const dlg = $('#codeDlg');
+    $('#codeErr').textContent = message || '';
+    $('#codeEntry').value = ST.get('groupCode') || '';
+    openDialog(dlg);
+    setTimeout(() => { try { $('#codeEntry').focus(); } catch (e) { /* ignore */ } }, 50);
+  }
+  function setupCodeDialog() {
+    const dlg = $('#codeDlg');
+    /* the site can't work without the code: Esc doesn't close this pop-up */
+    dlg.addEventListener('cancel', (e) => { if (needsCode()) e.preventDefault(); });
+    $('#codeForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const code = $('#codeEntry').value.trim();
+      const err = $('#codeErr'), btn = $('#codeGo');
+      if (!code) { err.textContent = t('code_empty'); return; }
+      err.textContent = '';
+      btn.disabled = true;
+      btn.classList.add('busy');
+      const label = $('span', btn);
+      if (label) label.textContent = t('checking');
+      ST.set('groupCode', code);
+      CC.api.clearCache();
+      try {
+        await CC.api.ping();
+        closeDialog(dlg);
+        const next = afterCode; afterCode = null;
+        if (next) next();
+        else if (st.run && st.run.fatal) search();
+        refreshUsage(true);
+      } catch (ex) {
+        if (ex && ex.code === 'bad_code') { ST.set('groupCode', ''); err.textContent = t('code_wrong'); }
+        else err.textContent = errorText(ex);
+      } finally {
+        btn.disabled = false;
+        btn.classList.remove('busy');
+        if (label) label.textContent = t('continue');
+      }
+    });
+    dlg.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-setlang]');
+      if (b) { ST.set('lang', b.dataset.setlang); applyLang(); }
+    });
+  }
+
   /* ================= settings ================= */
+  const adminMode = /[?&#]admin\b/.test(location.search + location.hash);
   let connAtOpen = null, demoAtOpen = null;
   function openSettings() {
     const dlg = $('#settingsDlg');
     connAtOpen = connKey();
     demoAtOpen = CC.api.isDemo();
     $('#codeInput').value = ST.get('groupCode') || '';
+    $('#codeField').hidden = CC.api.isDemo() && !adminMode;
+    $('#adminBox').hidden = !adminMode;
     $('#apiInput').value = ST.get('apiBase') || (root.CREW_CONFIG && root.CREW_CONFIG.apiBase) || '';
+    $('#demoToggle').checked = !!ST.get('forceDemo');
     $$('input[name=lang]').forEach(r => { r.checked = r.value === lang(); });
     $$('input[name=tfmt]').forEach(r => { r.checked = r.value === ST.get('timeFmt'); });
+    $$('input[name=theme]').forEach(r => { r.checked = r.value === (ST.get('theme') || 'auto'); });
     $('#backupsWanted').value = String(ST.get('backupsWanted'));
-    $('#demoToggle').checked = !!ST.get('forceDemo');
     drawMyAirlines();
     $('#testOut').textContent = '';
-    if (dlg.showModal) dlg.showModal(); else dlg.setAttribute('open', '');
+    openDialog(dlg);
   }
   function drawMyAirlines() {
     const mine = new Set(ST.get('myAirlines') || []);
-    $('#myAirlines').innerHTML = MY_AIRLINE_CHOICES.map(c =>
-      `<button type="button" class="al-chip${mine.has(c) ? ' on' : ''}" data-my="${c}" aria-pressed="${mine.has(c)}">${c} <small>${esc(AL.name(c))}</small></button>`).join('');
+    $('#myAirlines').innerHTML = MY_AIRLINE_CHOICES.filter(c => hiddenAirlines().indexOf(c) < 0).map(c =>
+      `<button type="button" class="al-chip${mine.has(c) ? ' on' : ''}" data-my="${esc(c)}" aria-pressed="${mine.has(c)}">${esc(c)} <small>${esc(AL.name(c))}</small></button>`).join('');
   }
   function connKey() { return [ST.get('groupCode'), ST.get('apiBase'), ST.get('forceDemo')].join('|'); }
   function saveSettingsInputs() {
-    const before = connKey();
     ST.set('groupCode', $('#codeInput').value.trim());
-    const api = $('#apiInput').value.trim();
-    const cfgBase = (root.CREW_CONFIG && root.CREW_CONFIG.apiBase) || '';
-    ST.set('apiBase', api && api !== cfgBase ? api : '');
-    ST.set('forceDemo', $('#demoToggle').checked);
-    const changed = before !== connKey();
-    if (changed) CC.api.clearCache();
+    if (adminMode) {
+      const api = $('#apiInput').value.trim();
+      const cfgBase = (root.CREW_CONFIG && root.CREW_CONFIG.apiBase) || '';
+      ST.set('apiBase', api && api !== cfgBase ? api : '');
+      ST.set('forceDemo', $('#demoToggle').checked);
+    }
     updateDemoBanner();
-    return changed;
   }
   function setupSettings() {
     $('#settingsBtn').addEventListener('click', openSettings);
+    const dlg = $('#settingsDlg');
+    $('#settingsForm').addEventListener('submit', (e) => { e.preventDefault(); closeDialog(dlg); });
+    $('.dlg-close', dlg).addEventListener('click', () => closeDialog(dlg));
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !hasDialog && dlg.hasAttribute('open')) closeDialog(dlg);
+    });
     $('#codeShow').addEventListener('click', () => {
       const i = $('#codeInput');
       i.type = i.type === 'password' ? 'text' : 'password';
@@ -1010,27 +1132,30 @@
     $('#backupsWanted').addEventListener('change', (e) => { ST.set('backupsWanted', +e.target.value); render(); });
     $('#testBtn').addEventListener('click', async () => {
       saveSettingsInputs();
+      CC.api.clearCache();
       const out = $('#testOut');
+      out.className = 'hint';
       out.textContent = t('testing');
       if (CC.api.isDemo()) { out.textContent = t('conn_demo'); out.className = 'hint warn-text'; return; }
       try {
         await CC.api.ping();
         const u = await CC.api.usage();
-        out.textContent = u && u.limit ? t('conn_ok', { u: u.used, l: u.limit }) : t('conn_ok_nolimit');
+        out.textContent = u && u.limit && u.used != null ? t('conn_ok', { u: u.used, l: u.limit }) : t('conn_ok_nolimit');
         out.className = 'hint ok-text';
       } catch (e) {
-        out.textContent = errorText(e);
+        out.textContent = e && e.code === 'bad_code' ? t('code_wrong') : errorText(e);
         out.className = 'hint warn-text';
       }
     });
     $('#resetBtn').addEventListener('click', () => {
       if (confirm(t('reset_confirm'))) { ST.reset(); location.hash = ''; location.reload(); }
     });
-    $('#settingsDlg').addEventListener('close', () => {
+    dlg.addEventListener('close', () => {
       saveSettingsInputs();
       const changed = connKey() !== connAtOpen || CC.api.isDemo() !== demoAtOpen;
       if (changed) CC.api.clearCache();
       applyLang();
+      if (needsCode()) { openCodeDialog(); return; }
       if (st.run && (changed || st.run.fatal)) search();
       else if (st.run) render();
     });

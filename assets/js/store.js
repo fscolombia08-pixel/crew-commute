@@ -8,6 +8,7 @@
   var DEFAULTS = {
     lang: (typeof navigator !== 'undefined' && /^es/i.test(navigator.language || '')) ? 'es' : 'en',
     timeFmt: '24h',
+    theme: 'auto',          /* auto (same as the device), light or dark */
     groupCode: '',
     apiBase: '',
     forceDemo: false,

@@ -29,6 +29,8 @@ from collections import Counter, defaultdict
 
 csv.field_size_limit(10_000_000)
 COUNTRIES = {'US', 'PR', 'VI', 'GU', 'MP', 'AS'}
+# Airlines left out of the route network and on-time history (Spirit, NK, stopped flying in May 2026).
+EXCLUDED_CARRIERS = {'NK'}
 TERRITORY_REGION = {'PR': 'PR', 'VI': 'VI', 'GU': 'GU', 'MP': 'MP', 'AS': 'AS'}
 STATE_TZ = {
     'AL': 'America/Chicago', 'AK': 'America/Anchorage', 'AZ': 'America/Phoenix', 'AR': 'America/Chicago',
@@ -172,6 +174,8 @@ class Builder:
             y, m = int(num(r.get('YEAR'))), int(num(r.get('MONTH')))
             if not (o and d and carrier and y and 1 <= m <= 12):
                 continue
+            if carrier in EXCLUDED_CARRIERS:
+                continue
             a = self.t100[(o, d, carrier, y, m)]
             a[0] += deps
             a[1] += seats
@@ -204,6 +208,8 @@ class Builder:
                 op = mk
             o, d = (r.get('Origin') or '').strip().upper(), (r.get('Dest') or '').strip().upper()
             if not (mk and fn and o and d):
+                continue
+            if mk in EXCLUDED_CARRIERS or op in EXCLUDED_CARRIERS:
                 continue
             try:
                 fn = str(int(float(fn)))

@@ -87,7 +87,8 @@
   function formatter(tz) {
     var f = fmtCache[tz];
     if (!f) {
-      var opts = { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
+      /* hour12:false works on older phones too (some show midnight as 24, fixed below) */
+      var opts = { timeZone: tz, hour12: false, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' };
       try { f = new Intl.DateTimeFormat('en-US', opts); }
       catch (e) { opts.timeZone = 'UTC'; f = new Intl.DateTimeFormat('en-US', opts); }   /* unknown zone name */
       fmtCache[tz] = f;
@@ -150,7 +151,7 @@
     var p = hhmm.split(':'), h = parseInt(p[0], 10);
     var pm = h >= 12;
     h = h % 12 || 12;
-    var ap = lang === 'es' ? (pm ? 'p. m.' : 'a. m.') : (pm ? 'PM' : 'AM');
+    var ap = lang === 'es' ? (pm ? 'p.\u00a0m.' : 'a.\u00a0m.') : (pm ? 'PM' : 'AM');   /* no line break inside "p. m." */
     return h + ':' + p[1] + '\u00a0' + ap;
   };
   T.fmtDur = function (min) {

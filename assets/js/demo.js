@@ -17,10 +17,9 @@
     WN: ['DAL', 'HOU', 'MDW', 'BWI', 'DEN', 'LAS', 'PHX', 'BNA', 'MCO', 'OAK', 'AUS', 'STL'],
     B6: ['JFK', 'BOS', 'FLL', 'MCO'],
     AS: ['SEA', 'PDX', 'SFO', 'LAX'],
-    F9: ['DEN', 'MCO', 'LAS', 'PHL', 'ATL', 'MIA'],
-    NK: ['FLL', 'LAS', 'MCO', 'DTW']
+    F9: ['DEN', 'MCO', 'LAS', 'PHL', 'ATL', 'MIA']
   };
-  var LEISURE = ['F9', 'NK', 'WN', 'B6'];
+  var LEISURE = ['F9', 'WN', 'B6'];
   /* Demo flights only exist between these airports (big airports, Florida, Hawaii, Alaska and the territories). */
   var DEMO_AIRPORTS = ['ABQ', 'ALB', 'ANC', 'ATL', 'AUS', 'BDL', 'BNA', 'BOI', 'BOS', 'BQN', 'BUF', 'BUR', 'BWI', 'CHS', 'CLE',
     'CLT', 'CMH', 'COS', 'CVG', 'DAL', 'DCA', 'DEN', 'DFW', 'DTW', 'ELP', 'EWR', 'EYW', 'FAI', 'FLL', 'GEG', 'GUM', 'HNL', 'HOU',
@@ -30,14 +29,14 @@
     'SPN', 'SRQ', 'STL', 'STT', 'STX', 'SYR', 'TLH', 'TPA', 'TUL', 'TUS'];
   var DEMO_SET = new Set(DEMO_AIRPORTS);
   D.covers = function (code) { return DEMO_SET.has(code); };
-  var CALLSIGN = { AA: 'AAL', UA: 'UAL', DL: 'DAL', WN: 'SWA', B6: 'JBU', AS: 'ASA', HA: 'HAL', F9: 'FFT', NK: 'NKS', BB: 'SBS' };
+  var CALLSIGN = { AA: 'AAL', UA: 'UAL', DL: 'DAL', WN: 'SWA', B6: 'JBU', AS: 'ASA', HA: 'HAL', F9: 'FFT', BB: 'SBS' };
   var NAMES = {
     AA: 'American Airlines', UA: 'United Airlines', DL: 'Delta Air Lines', WN: 'Southwest Airlines',
     B6: 'JetBlue Airways', AS: 'Alaska Airlines', HA: 'Hawaiian Airlines', F9: 'Frontier Airlines',
-    NK: 'Spirit Airlines', BB: 'Seaborne Airlines'
+    BB: 'Seaborne Airlines'
   };
   var REGIONALS = { AA: ['ENY', 'PDT', 'JIA'], UA: ['SKW', 'RPA', 'GJS'], DL: ['EDV', 'SKW', 'RPA'], AS: ['QXE', 'SKW'] };
-  var REG_SUFFIX = { AA: 'AA', UA: 'UA', DL: 'DN', WN: 'WN', B6: 'JB', AS: 'AS', HA: 'HA', F9: 'FR', NK: 'NK', BB: 'SB',
+  var REG_SUFFIX = { AA: 'AA', UA: 'UA', DL: 'DN', WN: 'WN', B6: 'JB', AS: 'AS', HA: 'HA', F9: 'FR', BB: 'SB',
     ENY: 'NN', PDT: 'PS', JIA: 'NJ', SKW: 'SY', RPA: 'YX', GJS: 'GJ', EDV: 'PQ', QXE: 'QX' };
   var SHARES = { AA: ['BA', 'QR', 'AS'], UA: ['LH', 'AC', 'NH'], DL: ['AF', 'KL', 'KE'], AS: ['AA', 'QF'], B6: ['EI'], HA: ['JL'] };
 
@@ -87,8 +86,8 @@
       }
       var m = {
         SJU: { AA: ['MIA', 'CLT', 'DFW', 'PHL', 'JFK', 'ORD'], B6: ['JFK', 'BOS', 'FLL', 'MCO', 'EWR'], DL: ['ATL', 'JFK'],
-          UA: ['EWR', 'IAD', 'ORD', 'IAH'], NK: ['FLL', 'MCO'], F9: ['MCO', 'MIA', 'PHL', 'ATL'], WN: ['MCO', 'BWI', 'FLL', 'TPA', 'HOU'] },
-        BQN: { B6: ['JFK', 'MCO', 'FLL'], NK: ['MCO', 'FLL'], UA: ['EWR'] },
+          UA: ['EWR', 'IAD', 'ORD', 'IAH'], F9: ['MCO', 'MIA', 'PHL', 'ATL'], WN: ['MCO', 'BWI', 'FLL', 'TPA', 'HOU'] },
+        BQN: { B6: ['JFK', 'MCO', 'FLL'], UA: ['EWR'] },
         PSE: { B6: ['JFK', 'MCO'] },
         STT: { AA: ['MIA', 'CLT', 'JFK'], DL: ['ATL', 'JFK'], UA: ['EWR'], B6: ['JFK'] },
         STX: { AA: ['MIA'], DL: ['ATL'] }
@@ -132,7 +131,6 @@
     if (c === 'HA') return dist < 400 ? 'Boeing 717-200' : (dist > 2600 ? 'Airbus A330-200' : 'Airbus A321neo');
     if (c === 'WN') return x < 0.5 ? 'Boeing 737-700' : 'Boeing 737 MAX 8';
     if (c === 'F9') return x < 0.5 ? 'Airbus A320neo' : 'Airbus A321neo';
-    if (c === 'NK') return x < 0.5 ? 'Airbus A320' : 'Airbus A321';
     if (c === 'B6') return dist < 900 && x < 0.4 ? 'Airbus A220-300' : (x < 0.7 ? 'Airbus A320' : 'Airbus A321');
     if (c === 'AS') return x < 0.5 ? 'Boeing 737-900' : 'Boeing 737 MAX 9';
     if (dist > 2400) return x < 0.5 ? 'Boeing 787-9' : 'Boeing 777-200';

@@ -7,7 +7,7 @@
   /* Marketing airlines (IATA code -> name). */
   L.NAMES = {
     AA: 'American', UA: 'United', DL: 'Delta', WN: 'Southwest', B6: 'JetBlue', AS: 'Alaska',
-    HA: 'Hawaiian', F9: 'Frontier', NK: 'Spirit', G4: 'Allegiant', SY: 'Sun Country', MX: 'Breeze',
+    HA: 'Hawaiian', F9: 'Frontier', G4: 'Allegiant', SY: 'Sun Country', MX: 'Breeze',
     XP: 'Avelo', '9K': 'Cape Air', '9X': 'Southern Airways Express', LF: 'Contour', '7H': 'Ravn Alaska',
     '4B': 'Boutique Air', KS: 'PenAir', '3M': 'Silver Airways', MW: 'Mokulele', BB: 'Seaborne',
     OO: 'SkyWest', YX: 'Republic', MQ: 'Envoy', OH: 'PSA', PT: 'Piedmont', '9E': 'Endeavor',
@@ -24,7 +24,7 @@
   L.OPERATORS = {
     AAL: ['AA', 'American'], UAL: ['UA', 'United'], DAL: ['DL', 'Delta'], SWA: ['WN', 'Southwest'],
     JBU: ['B6', 'JetBlue'], ASA: ['AS', 'Alaska'], HAL: ['HA', 'Hawaiian'], FFT: ['F9', 'Frontier'],
-    NKS: ['NK', 'Spirit'], AAY: ['G4', 'Allegiant'], SCX: ['SY', 'Sun Country'], MXY: ['MX', 'Breeze'],
+    AAY: ['G4', 'Allegiant'], SCX: ['SY', 'Sun Country'], MXY: ['MX', 'Breeze'],
     VXP: ['XP', 'Avelo'], SKW: ['OO', 'SkyWest'], RPA: ['YX', 'Republic'], ENY: ['MQ', 'Envoy'],
     JIA: ['OH', 'PSA'], PDT: ['PT', 'Piedmont'], EDV: ['9E', 'Endeavor'], ASH: ['YV', 'Mesa'],
     GJS: ['G7', 'GoJet'], QXE: ['QX', 'Horizon'], AWI: ['ZW', 'Air Wisconsin'], UCA: ['C5', 'CommutAir'],

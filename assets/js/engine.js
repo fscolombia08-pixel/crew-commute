@@ -12,7 +12,7 @@
   var E = CC.engine = {};
   var MIN = 60000;
   /* Airlines that actually operate U.S. domestic flights (others are codeshare sellers). */
-  var US_OPERATORS = new Set(['AA', 'UA', 'DL', 'WN', 'B6', 'AS', 'HA', 'F9', 'NK', 'G4', 'SY', 'MX', 'XP',
+  var US_OPERATORS = new Set(['AA', 'UA', 'DL', 'WN', 'B6', 'AS', 'HA', 'F9', 'G4', 'SY', 'MX', 'XP',
     '9K', '9X', 'LF', '7H', '4B', 'KS', '3M', 'MW', 'BB', 'OO', 'YX', 'MQ', 'OH', 'PT', '9E', 'YV', 'G7',
     'QX', 'ZW', 'C5', 'CP', 'GQ', '8V', 'Z3', 'DH', '2E']);
   E.US_OPERATORS = US_OPERATORS;
@@ -459,7 +459,7 @@
       if (inc && !it.legs.every(function (l) {
         return inc.has(l.carrier) || (l.codeshares || []).some(function (c) { return inc.has(c.split(' ')[0]); });
       })) return false;
-      if (exc && it.legs.some(function (l) { return exc.has(l.carrier); })) return false;
+      if (exc && it.legs.some(function (l) { return exc.has(l.carrier) || (l.opIata && exc.has(l.opIata)); })) return false;
       return true;
     });
   };

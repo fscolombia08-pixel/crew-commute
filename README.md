@@ -12,7 +12,8 @@ What it shows for each option:
 - **Quick trips:** one-tap searches for your usual routes (set in `config.js`)
 - **Inbound plane check:** is the aircraft for your flight late on its previous leg?
 - Weather (METAR/TAF) and FAA ground stops and delay programs at every airport on the trip
-- English and Spanish, works on phones, can be added to the home screen, saves your usual trips
+- English and Spanish, light and dark theme, works on phones, tablets and computers, can be added to the home screen, saves your usual trips
+- **Easy start for friends:** the first time someone opens the site, a welcome pop-up asks for the group code. They type it once on that phone or computer.
 
 > **Important:** Crew Commute only finds flights. It does **not** show loads, open seats or the standby list. Always check loads and list in your airline's employee travel app.
 
@@ -45,7 +46,7 @@ You need three free accounts: **GitHub**, **Cloudflare** and **RapidAPI** (for A
 4. Open the `crew-commute` folder on your computer. Select **everything inside it** (Ctrl+A) and drag it into the browser window. Drag the files and folders that are inside, not the `crew-commute` folder itself.
 5. Wait until all files are listed, then click **Commit changes**.
 6. Go to **Settings → Pages**. Under **Build and deployment**, set Source to **Deploy from a branch**, Branch to **main**, and the folder to **/ (root)**. Click **Save**.
-7. After 1–2 minutes your site is live at `https://YOUR-GITHUB-NAME.github.io/crew-commute/`. It opens in **demo mode** (made-up flights) until Step 3 is done.
+7. After 1–2 minutes your site is live at `https://YOUR-GITHUB-NAME.github.io/crew-commute/`. When it opens, a welcome pop-up asks for the group code. Searches work once Step 2 is done.
 
 ### Step 2: Create the Cloudflare helper
 
@@ -70,18 +71,20 @@ Cloudflare sometimes renames menu items. If a name below looks a little differen
 
 **Where to find the RapidAPI key:** go to [aerodatabox.com/pricing](https://aerodatabox.com/pricing), choose **RapidAPI**, and subscribe to **Basic (free)**. On the AeroDataBox page in RapidAPI, the code examples show `X-RapidAPI-Key: ...`. That long value is your key. Keep it private.
 
-### Step 3: Connect the website to the helper
+### Step 3: Connect the website to the helper (already done)
 
-1. In your GitHub repository, open `config.js` and click the pencil icon (Edit).
-2. Put your Worker address between the quotes:
-   `apiBase: "https://crew-commute-helper.YOUR-NAME.workers.dev"`
-3. Click **Commit changes**. Wait about 1 minute.
-4. Open your site, tap the gear icon (Settings), type the group code, and tap **Test connection**. You should see **"Connected."**
-5. Search! The demo banner is gone, so the flights are real.
+Your helper address is already saved in `config.js`, so nobody ever has to type it:
+`apiBase: "https://crew-commute-helper.fscolombia08.workers.dev"`
+
+1. Open your site. The welcome pop-up asks for the group code.
+2. Type the code (the same as `ACCESS_CODE` in Cloudflare) and tap **Continue**. The site checks it and remembers it on that device.
+3. Search! The flights are real.
+
+If you ever create a new helper, open `config.js` on GitHub, click the pencil icon (Edit), change the address between the quotes, and click **Commit changes**.
 
 ### Step 4: Share it with your friends
 
-Send them the site link and the group code privately (for example in WhatsApp). Each person types the code once in Settings.
+Send them the site link and the group code privately (for example in WhatsApp). The first time they open the link, the welcome pop-up asks for the code. They type it once and the site remembers it. They can change it later in Settings (gear icon).
 
 - **iPhone:** open the site in Safari, tap **Share**, then **Add to Home Screen**.
 - **Android:** open it in Chrome, tap **⋮**, then **Add to Home screen** (or **Install app**).
@@ -108,9 +111,20 @@ Then change `MONTHLY_UNITS` in Cloudflare to match your plan. The helper stops b
 
 ---
 
-## Changing the quick trips
+## Changing the quick trips or hidden airlines
 
-Open `config.js` on GitHub, click the pencil icon, and edit the `quickTrips` list (for example `{ from: "DEN", to: "FLL" }`). Then click **Commit changes**.
+Open `config.js` on GitHub, click the pencil icon, and edit it. Then click **Commit changes**.
+
+- `quickTrips`: the one-tap searches, for example `{ from: "DEN", to: "FLL" }`.
+- `hideAirlines`: airlines that never show up. It is set to `["NK"]` because Spirit stopped flying in May 2026.
+
+## Light and dark theme
+
+Tap the moon or sun button at the top to switch. In Settings you can also choose **Same as my device**, which follows the phone's own dark mode.
+
+## Owner settings (only for you)
+
+Open the site with `?admin` at the end, for example `https://YOUR-GITHUB-NAME.github.io/crew-commute/?admin`. Settings then also shows the helper address and **Use demo data** (made-up flights, useful for testing without using data units). Your friends never see these.
 
 ---
 
@@ -129,12 +143,13 @@ The route network (T-100) and on-time history come from free BTS downloads. To r
 
 | Message | Fix |
 |---|---|
-| "The group code is missing or wrong" | In Settings, type the code exactly as in Cloudflare's `ACCESS_CODE`. Capital letters don't matter. |
+| "That code didn't work" (in the welcome pop-up) | Type the code exactly as in Cloudflare's `ACCESS_CODE`. Capital letters don't matter. |
+| "Too many wrong codes" | The helper pauses for 15 minutes after several wrong codes from the same connection. Wait, then try again. |
 | "Can't reach the flight-data helper" | Check `apiBase` in `config.js`, and check that `ALLOWED_ORIGINS` is `https://YOUR-GITHUB-NAME.github.io` with no slash and nothing after it. |
 | "The flight data key was refused" | Check `ADB_KEY`, and check that you are subscribed to AeroDataBox on RapidAPI. |
 | "This month's flight-data limit is used up" | The plan's units are used up. It resets next month, or you can upgrade. |
 | No flights for a small airport | Flight-data coverage of very small airlines can be incomplete. Try a nearby bigger airport. |
-| Still in demo mode | Make sure `config.js` has your helper address, and that "Use demo data" is off in Settings. |
+| Still in demo mode | Make sure `config.js` has your helper address. Open the site with `?admin`, and in Settings make sure "Use demo data" is off. |
 
 ---
 
@@ -143,7 +158,7 @@ The route network (T-100) and on-time history come from free BTS downloads. To r
 | Path | What it is |
 |---|---|
 | `index.html`, `assets/` | The website |
-| `config.js` | Your helper address and quick trips (the only file you edit) |
+| `config.js` | Your helper address, quick trips and hidden airlines (the only file you edit) |
 | `data/` | Airports, route network and on-time history (built by `tools/build_data.py`) |
 | `worker/worker.js` | The Cloudflare helper (copy into Cloudflare) |
 | `tools/build_data.py` | Builds `data/` from the free downloads |

@@ -28,7 +28,7 @@ const MIA_BOARD = {
     fl('QR 2001', null, mv(null, `${D} 11:00Z`, `${D} 07:00-04:00`), mv('DFW', `${D} 14:05Z`, `${D} 09:05-05:00`), { codeshareStatus: 'Unknown' }),
     fl('UA 5432', 'SKW5432', mv(null, `${D} 12:00Z`, `${D} 08:00-04:00`), mv('IAH', `${D} 14:40Z`, `${D} 09:40-05:00`), { aircraft: { model: 'Embraer 175' } }),
     fl('F9 101', 'FFT101', mv(null, `${D} 13:00Z`, `${D} 09:00-04:00`), mv('DEN', `${D} 17:15Z`, `${D} 11:15-06:00`)),
-    fl('NK 77', 'NKS77', mv(null, `${D} 15:00Z`, `${D} 11:00-04:00`), mv('DFW', `${D} 18:00Z`, `${D} 13:00-05:00`), { status: 'Canceled' })
+    fl('G4 77', 'AAY77', mv(null, `${D} 15:00Z`, `${D} 11:00-04:00`), mv('DFW', `${D} 18:00Z`, `${D} 13:00-05:00`), { status: 'Canceled' })
   ],
   arrivals: []
 };
@@ -54,7 +54,7 @@ test('time helpers handle zones and DST', () => {
   assert.equal(T.zoned(Date.UTC(2026, 9, 20, 14, 5), 'America/Phoenix').time, '07:05');
   assert.equal(T.addDays('2026-12-31', 1), '2027-01-01');
   assert.equal(T.fmtClock('14:05', '12h'), '2:05\u00a0PM');
-  assert.equal(T.fmtClock('13:05', '12h', 'es'), '1:05\u00a0p. m.');
+  assert.equal(T.fmtClock('13:05', '12h', 'es'), '1:05\u00a0p.\u00a0m.');
   assert.equal(T.fmtDur(125), '2h 05m');
 });
 
@@ -83,7 +83,7 @@ test('normalizes a board, merges codeshares, finds the operator', () => {
   const ua = f.find(x => x.flight === 'UA 5432');
   assert.equal(ua.opName, 'SkyWest');
   assert.equal(ua.opIata, 'OO');
-  assert.ok(f.find(x => x.flight === 'NK 77').canceled);
+  assert.ok(f.find(x => x.flight === 'G4 77').canceled);
 });
 
 test('accepts the older AeroDataBox time fields and "movement" boards', () => {
@@ -115,7 +115,7 @@ test('builds nonstop and 1-stop itineraries with connection rules', () => {
   assert.ok(!ids.includes('AA 1234+AA 2001'), '25 min too short');
   assert.ok(ids.includes('AA 1234+UA 2100'), 'other airline 85 min ok');
   assert.ok(ids.includes('UA 5432+UA 1500'), 'regional + mainline, same airline 40 min');
-  assert.ok(!ids.some(x => x.startsWith('NK 77')), 'canceled flights dropped');
+  assert.ok(!ids.some(x => x.startsWith('G4 77')), 'canceled flights dropped');
   const aaua = it.find(i => i.legs.map(l => l.flight).join('+') === 'AA 1234+UA 2100');
   assert.equal(aaua.conns[0].min, 85);
   assert.equal(aaua.conns[0].same, false);
@@ -142,6 +142,24 @@ test('filters by time windows, airlines and red-eyes', () => {
   assert.ok(E.filter(it, { maxStops: 0 }).every(i => i.stops === 0));
   const red = { depDate: '2026-10-20', depTime: '23:10', arrDate: '2026-10-21', arrTime: '07:05', depUtc: 0, arrUtc: 5 * 3600000 };
   assert.equal(E.isRedeye(red), true);
+});
+
+test('hidden airlines are left out (by seller or operator), and Spirit is gone', () => {
+  const pool = new E.Pool();
+  pool.add(E.normalizeBoard(MIA_BOARD, 'MIA'));
+  pool.add(E.normalizeBoard(DEN_BOARD, 'DEN'));
+  const it = E.build(pool, { origins: ['MIA'], dests: ['DEN'], depDates: [D], minConnSame: 35, minConnOther: 60, maxConn: 360, maxStops: 1 });
+  const noF9 = E.filter(it, { exclude: ['F9'] });
+  assert.ok(noF9.length > 0 && noF9.every(i => i.legs.every(l => l.carrier !== 'F9')));
+  assert.ok(it.some(i => i.legs[0].flight === 'UA 5432'), 'fixture has the SkyWest-operated flight');
+  assert.ok(!E.filter(it, { exclude: ['OO'] }).some(i => i.legs.some(l => l.flight === 'UA 5432')), 'operator counts too');
+  assert.equal(E.US_OPERATORS.has('NK'), false);
+  assert.equal(CC.airlines.operatorFromCallsign('NKS123').iata, null, 'Spirit call signs are no longer mapped');
+  ['FLL', 'MCO', 'SJU', 'BQN', 'LAS'].forEach(a => [0, 1].forEach(h => {
+    const b = CC.demo.board(a, D, h);
+    const all = (b.departures || []).concat(b.arrivals || []);
+    assert.ok(all.length > 0 && all.every(f => !/^NK /.test(f.number)), 'no Spirit flights in demo data at ' + a);
+  }));
 });
 
 test('commute plan picks Plan A with a backup after it', () => {
