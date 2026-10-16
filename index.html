@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Crew Commute</title>
+  <meta name="description" content="One-way flight finder for airline crew: every airline, every connection.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#0f2a4a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Crew Commute">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="assets/img/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
+  <link rel="stylesheet" href="assets/css/app.css">
+</head>
+<body>
+  <a class="skip" href="#results">Skip to results</a>
+
+  <header class="top">
+    <div class="top-inner">
+      <a class="brand" href="./" aria-label="Crew Commute">
+        <svg class="logo" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="currentColor" class="logo-bg"/>
+          <path d="M7 23 C 11 10, 21 8, 25 9" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="0.1 4.2"/>
+          <circle cx="7" cy="23" r="2.6" fill="#fff"/>
+          <path d="M21.5 6.2 L27.2 9.1 L21.8 12.3 L22.9 9.4 Z" fill="#ffb547"/>
+        </svg>
+        <span class="brand-text">
+          <span class="brand-name">Crew Commute</span>
+          <span class="brand-tag" data-i18n="tagline">Every airline. Every connection. One way.</span>
+        </span>
+      </a>
+      <div class="top-actions">
+        <button type="button" id="langBtn" class="pill-btn" aria-label="Español / English">ES</button>
+        <button type="button" id="settingsBtn" class="icon-btn" data-i18n-aria="settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8Zm8.2 4.7-.1-2.6 2-1.6-2-3.5-2.4.9a7.7 7.7 0 0 0-2.2-1.3L15 2.6h-4l-.5 2.6c-.8.3-1.5.7-2.2 1.3l-2.4-.9-2 3.5 2 1.6a7.6 7.6 0 0 0 0 2.6l-2 1.6 2 3.5 2.4-.9c.7.6 1.4 1 2.2 1.3l.5 2.6h4l.5-2.6c.8-.3 1.5-.7 2.2-1.3l2.4.9 2-3.5-2-1.6Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div id="demoBanner" class="banner" hidden>
+    <span data-i18n="demo_banner"></span>
+  </div>
+
+  <main class="wrap">
+    <section class="card search-card" aria-labelledby="searchTitle">
+      <h1 id="searchTitle" class="sr-only">Crew Commute</h1>
+      <div class="seg" role="tablist">
+        <button type="button" role="tab" id="tabFind" class="seg-btn" aria-selected="true" data-mode="find" data-i18n="tab_find">Find flights</button>
+        <button type="button" role="tab" id="tabCommute" class="seg-btn" aria-selected="false" data-mode="commute" data-i18n="tab_commute">Commute to work</button>
+      </div>
+
+      <div class="trips" id="trips" hidden>
+        <div class="trip-group" id="quickGroup" hidden>
+          <span class="lbl" data-i18n="quick_trips">Quick trips</span>
+          <div class="trip-list" id="quickList"></div>
+        </div>
+        <div class="trip-group" id="savedGroup" hidden>
+          <span class="lbl" data-i18n="saved_trips">My trips</span>
+          <div class="trip-list" id="tripList"></div>
+        </div>
+      </div>
+
+      <form id="searchForm" novalidate autocomplete="off">
+        <div class="od">
+          <div class="ap-field" data-side="from">
+            <label class="lbl" for="fromInput" data-i18n="from">From</label>
+            <div class="ap-box">
+              <div class="ap-chips"></div>
+              <input id="fromInput" class="ap-input" type="text" inputmode="search" spellcheck="false"
+                     role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="fromList" data-i18n-ph="airport_ph">
+            </div>
+            <ul id="fromList" class="ap-list" role="listbox" hidden></ul>
+            <div class="ap-nearby"></div>
+          </div>
+
+          <button type="button" id="swapBtn" class="swap-btn" data-i18n-aria="swap">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v14m0 0-3-3m3 3 3-3M17 20V6m0 0-3 3m3-3 3 3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+
+          <div class="ap-field" data-side="to">
+            <label class="lbl" for="toInput" id="toLabel" data-i18n="to">To</label>
+            <div class="ap-box">
+              <div class="ap-chips"></div>
+              <input id="toInput" class="ap-input" type="text" inputmode="search" spellcheck="false"
+                     role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="toList" data-i18n-ph="airport_ph">
+            </div>
+            <ul id="toList" class="ap-list" role="listbox" hidden></ul>
+            <div class="ap-nearby"></div>
+          </div>
+        </div>
+
+        <div class="row when">
+          <div class="field">
+            <label class="lbl" for="dateInput" id="dateLabel" data-i18n="date">Date</label>
+            <input id="dateInput" type="date" required>
+          </div>
+          <div class="field commute-only">
+            <label class="lbl" for="reportInput" data-i18n="report_time">Report time (local)</label>
+            <input id="reportInput" type="time" value="14:00">
+          </div>
+          <div class="field commute-only">
+            <label class="lbl" for="bufferInput" data-i18n="buffer">Land at least</label>
+            <select id="bufferInput"></select>
+          </div>
+        </div>
+        <label class="check commute-only"><input type="checkbox" id="nightBefore" checked> <span data-i18n="night_before">Include flights the night before</span></label>
+
+        <details class="filters" id="filtersBox">
+          <summary><span data-i18n="filters">Filters</span><span class="filter-count" id="filterCount"></span></summary>
+          <div class="filters-grid">
+            <fieldset class="field span2">
+              <legend class="lbl" data-i18n="stops">Stops</legend>
+              <div class="radio-row" id="stopsRow">
+                <label><input type="radio" name="stops" value="0"> <span data-i18n="stops_0">Nonstop only</span></label>
+                <label><input type="radio" name="stops" value="1" checked> <span data-i18n="stops_1">Up to 1 stop</span></label>
+                <label><input type="radio" name="stops" value="2"> <span data-i18n="stops_2">Up to 2 stops</span></label>
+              </div>
+            </fieldset>
+            <div class="field">
+              <span class="lbl" data-i18n="leave_between">Leave between</span>
+              <div class="time-pair">
+                <input type="time" id="depAfter" aria-label="after">
+                <span data-i18n="and">and</span>
+                <input type="time" id="depBefore" aria-label="before">
+              </div>
+            </div>
+            <div class="field find-only">
+              <span class="lbl" data-i18n="arrive_between">Arrive between</span>
+              <div class="time-pair">
+                <input type="time" id="arrAfter" aria-label="after">
+                <span data-i18n="and">and</span>
+                <input type="time" id="arrBefore" aria-label="before">
+              </div>
+            </div>
+            <div class="field">
+              <label class="lbl" for="minSame" data-i18n="min_conn_same">Min. connection, same airline</label>
+              <select id="minSame"></select>
+            </div>
+            <div class="field">
+              <label class="lbl" for="minOther" data-i18n="min_conn_other">Min. connection, different airlines</label>
+              <select id="minOther"></select>
+            </div>
+            <div class="field">
+              <label class="lbl" for="maxConn" data-i18n="max_conn">Max. connection</label>
+              <select id="maxConn"></select>
+            </div>
+            <div class="field checks">
+              <label class="check"><input type="checkbox" id="noRedeye"> <span data-i18n="hide_redeyes">Hide red-eyes</span></label>
+              <label class="check"><input type="checkbox" id="onlyMine"> <span data-i18n="only_mine">Only my airlines</span></label>
+            </div>
+          </div>
+        </details>
+
+        <div class="form-actions">
+          <button type="submit" class="primary" id="searchBtn"><span data-i18n="search">Search</span></button>
+        </div>
+      </form>
+
+    </section>
+
+    <section id="status" class="status" aria-live="polite"></section>
+    <section id="plan"></section>
+    <section id="conditions"></section>
+    <section id="toolbar"></section>
+    <section id="results" tabindex="-1"></section>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <p id="usageLine" class="usage"></p>
+      <p data-i18n="footer_data"></p>
+      <p data-i18n="footer_disclaimer"></p>
+      <p class="muted small" id="dataVersion"></p>
+    </div>
+  </footer>
+
+  <dialog id="settingsDlg" class="dlg" aria-labelledby="settingsTitle">
+    <form method="dialog" class="dlg-body" id="settingsForm">
+      <div class="dlg-head">
+        <h2 id="settingsTitle" data-i18n="settings">Settings</h2>
+        <button value="close" class="icon-btn" data-i18n-aria="close">✕</button>
+      </div>
+
+      <div class="field">
+        <label class="lbl" for="codeInput" data-i18n="group_code">Group code</label>
+        <div class="inline">
+          <input id="codeInput" type="password" autocomplete="off" spellcheck="false">
+          <button type="button" class="ghost" id="codeShow" data-i18n="show">Show</button>
+        </div>
+        <p class="hint" data-i18n="group_code_help"></p>
+      </div>
+
+      <div class="field">
+        <label class="lbl" for="apiInput" data-i18n="helper_url">Helper address</label>
+        <input id="apiInput" type="url" placeholder="https://crew-commute-helper.yourname.workers.dev" spellcheck="false">
+      </div>
+      <div class="inline">
+        <button type="button" class="ghost" id="testBtn" data-i18n="test_connection">Test connection</button>
+        <span id="testOut" class="hint" aria-live="polite"></span>
+      </div>
+
+      <div class="grid2">
+        <div class="field">
+          <span class="lbl" data-i18n="language">Language</span>
+          <div class="radio-row">
+            <label><input type="radio" name="lang" value="en"> English</label>
+            <label><input type="radio" name="lang" value="es"> Español</label>
+          </div>
+        </div>
+        <div class="field">
+          <span class="lbl" data-i18n="time_format">Time format</span>
+          <div class="radio-row">
+            <label><input type="radio" name="tfmt" value="24h"> 14:05</label>
+            <label><input type="radio" name="tfmt" value="12h"> 2:05 PM</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label class="lbl" for="backupsWanted" data-i18n="backups_wanted">Backups I want after Plan A</label>
+        <select id="backupsWanted"><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+      </div>
+
+      <div class="field">
+        <span class="lbl" data-i18n="my_airlines">My airlines</span>
+        <div class="chip-select" id="myAirlines"></div>
+      </div>
+
+      <label class="check"><input type="checkbox" id="demoToggle"> <span data-i18n="demo_mode">Use demo data</span></label>
+
+      <div class="dlg-foot">
+        <button type="button" class="link-btn" id="resetBtn" data-i18n="reset_all">Clear my saved settings</button>
+        <button value="done" class="primary" data-i18n="done">Done</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script src="config.js"></script>
+  <script src="assets/js/core.js"></script>
+  <script src="data/airports.js"></script>
+  <script src="data/routes.js"></script>
+  <script src="data/meta.js"></script>
+  <script src="assets/js/airports.js"></script>
+  <script src="assets/js/airlines.js"></script>
+  <script src="assets/js/store.js"></script>
+  <script src="assets/js/i18n.js"></script>
+  <script src="assets/js/engine.js"></script>
+  <script src="assets/js/conditions.js"></script>
+  <script src="assets/js/score.js"></script>
+  <script src="assets/js/demo.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/inbound.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>

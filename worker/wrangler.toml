@@ -1,0 +1,15 @@
+# Optional: only needed if you deploy with the Wrangler command-line tool.
+# The setup guide uses the Cloudflare dashboard instead (no command line needed).
+name = "crew-commute-helper"
+main = "worker.js"
+compatibility_date = "2026-10-01"
+
+# Create a KV namespace in the dashboard (Storage & Databases > KV), then paste its id here.
+[[kv_namespaces]]
+binding = "CACHE"
+id = "PASTE_YOUR_KV_NAMESPACE_ID_HERE"
+
+[vars]
+ALLOWED_ORIGINS = "https://YOUR-GITHUB-NAME.github.io"
+MONTHLY_UNITS = "400"
+# Secrets (set with: npx wrangler secret put ACCESS_CODE  and  npx wrangler secret put ADB_KEY)
