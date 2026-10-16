@@ -9,7 +9,7 @@
  * quickTrips: one-tap searches shown to everyone at the top of the search box.
  */
 window.CREW_CONFIG = {
-  apiBase: "",
+  apiBase: "https://crew-commute-helper.fscolombia08.workers.dev/",
   quickTrips: [
     { from: "DEN", to: "FLL" },
     { from: "DEN", to: "MIA" },
